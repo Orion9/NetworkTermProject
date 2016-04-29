@@ -1,2 +1,0 @@
-/home/oguz/projects/NetworkTermProject/build/CMakeFiles/client.dir
-/home/oguz/projects/NetworkTermProject/build/CMakeFiles/server.dir
