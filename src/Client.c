@@ -15,6 +15,16 @@
 #define STRING_SIZE 250
 #define FIELD_SIZE 3
 
+/*
+ * BASIC LOGIC OF THE PROGRAM:
+ * User sends commands to server,
+ * Server interprets the commands returns response,
+ * Client takes response and prints it.
+ * Client always sends chars,
+ * Server may send different data types,
+ * So be prepared for different data types.
+ */
+
 /* Game Settings */
 typedef enum GameSigns {
     EMPTY, O, X
@@ -28,12 +38,11 @@ typedef struct GameSettings {
 } GameSettings;
 
 /* Game room information */
-typedef struct SessionList {
+typedef struct Session {
     int room_key;
     char room_name[STRING_SIZE];
     GameSettings game_settings;
-    struct SessionList *next;
-} SessionList;
+} Session;
 
 typedef struct User {
   char user_name[STRING_SIZE];
@@ -46,14 +55,23 @@ extern void init_game(GameSettings **game_settings);
 /* It will play move */
 extern int play_game(int **game_table, char **player, int **move);
 
+/* Create new session */
+extern int create_session(char **player);
+
+/* Join session */
+extern int join_session(char **player);
+
 /* Prints main menu */
 extern void print_menu();
 
 /* Prints list of all game rooms */
-extern void list_games(SessionList **game_list);
+extern void list_games(Session **game_list);
 
 /* Prints current game */
 extern void print_game();
+
+/* Command Handler */
+extern void cmd_handler(char command[STRING_SIZE]);
 
 int main(int argc, char **argv)
 {
@@ -108,57 +126,65 @@ int main(int argc, char **argv)
     struct tm auth_time;
     char *position;
     char recv_time[STRING_SIZE];
-    
+    char command[STRING_SIZE];
+    char response[STRING_SIZE];
     /* TODO Cleanup the code a little bit after learn FD */
     while (1) {
         read_fds = master;
 
         /* Track and try socket */
-        /*
-        if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
+      
+        /*if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
             printf("Error (3): Sockets cannot be multiplexed!\n");
             exit(3);
         }*/
         
         if (is_user_login != 1) {
-          printf("Username: ");
-          fgets(user_info.user_name, 250, stdin);
+          printf("Username and Password: ");
+          fgets(command, 250, stdin);
           
           /* Remove trailing new line char */
-          if((position = strchr(user_info.user_name, '\n')) != NULL){
+          if((position = strchr(command, '\n')) != NULL){
             *position = '\0';
           }
           
-          printf("Password: ");
-          fgets(user_info.password, 250, stdin);
-          
-          /* Remove trailing new line char */
-          if((position = strchr(user_info.password, '\n')) != NULL){
-            *position = '\0';
-          }
-          
-          if (user_info.user_name[0] != '\0' && user_info.password[0] != '\0') {
-            send(socket_fd, &user_info, sizeof(User), 0);
-            
-            auth = time(NULL);
-            if (auth != -1){
-              auth_time = *localtime(&auth);
-              strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_time);
+          if (command[0] != '\0') {
+            send(socket_fd, &command, sizeof(command), 0);
+            int nbytes;
+            if ((nbytes = recv(socket_fd, &response, sizeof(response), 0)) <= 0)
+            {
+              printf("No connection with server \n");
+              exit(1);
             }
-            
-            /* FIXME Problem with time formatting wonder why though no idea */
-            printf("%s authenticated at %s", user_info.user_name, recv_time);
-            is_user_login = 1;
+            else
+            {
+              printf("response is %s \n", response);
+              is_user_login = atoi(response);
+              if (is_user_login == 1)
+              {
+                auth = time(NULL);
+                if (auth != -1){
+                  auth_time = *localtime(&auth);
+                  strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_time);
+                }
+                char *username = strtok(command, " ");
+                printf("%s authenticated at %s \n", username, recv_time);
+              }
+            }
+            sleep(1);
           }
         }
-        
+        print_menu();
+        fgets(command, STRING_SIZE, stdin);
+        send(socket_fd, &command, sizeof(command), 0);
+        /* TODO Generate menu cases */
         /* TODO Learn dafuq is this below */
         /*
         for (i = 0; i <= fdmax; i++)
             if (FD_ISSET(i, &read_fds)) {
               /* Ready for write   
               if (i == 0) {
-                printf("[list, play]: ");
+                
                 fgets(send_buf, BUFSIZE, stdin);
                  
                 if (strcmp(send_buf, "quit\n") == 0) {
@@ -177,8 +203,10 @@ int main(int argc, char **argv)
 
 void print_menu()
 {
+  system("clear");
   printf("XOX Multi Showdown! \n");
-  printf("List Available Games \n");
-  printf("Quit \n");
+  printf("Use 'new' for Create New Session \n");
+  printf("Use 'list' for See Available Sessions \n");
+  printf("Use 'quit' for Quit \n");
+  printf("[new, list, quit]: ");
 }
-

@@ -36,6 +36,7 @@ typedef struct SessionList {
 typedef struct User {
     char user_name[STRING_SIZE];
     char user_pass[STRING_SIZE];
+    int is_logged_in;
 } User;
 
 /* User list */
@@ -44,11 +45,43 @@ typedef struct UserList {
     struct UserList *next;
 } UserList;
 
+User list[50];
+
+/* It will initialize game settings before game starts */
+extern void init_game(GameSettings **game_settings);
+
+/* It will play move */
+extern int play_game(int **game_table, char **player, int **move);
+
+/* Create new session */
+extern int create_session(char **player);
+
+/* Join session */
+extern int join_session(char **player);
+
+/* Prints main menu */
+extern void print_menu();
+
+/* Prints list of all game rooms */
+extern void list_games(SessionList **game_list);
+
+/* Prints current game */
+extern void print_game();
+
+/* Command Handler */
+extern void cmd_handler(char command[STRING_SIZE]);
+
 int main(int argc, char **argv)
 {
     if (argc <= 1) {
         printf("Please give port number to listen\n");
         exit(1);
+    }
+    
+    int a = 0;
+    for (a = 0; a < 50; a++)
+    {
+      list[a].is_logged_in = 0;
     }
 
     fd_set master; //master file descriptor list
@@ -98,17 +131,18 @@ int main(int argc, char **argv)
     printf("Binding is done...\n");
 
     if (listen(listener, 45) == -1) {    //listening, 45 connection is let in buffer
-        printf("");
+        printf("Error in listener");
         exit(1);    //EXIT FAILURE
     }
     printf("Server is listening...\n");
 
     FD_SET(listener, &master);   //add listener to master set
     fdmax = listener; //biggest is listener now
-    User user_data;
+    char user_command[STRING_SIZE];
     struct tm auth_recv_time;
     time_t recv_time_t;
     char recv_time[STRING_SIZE];
+    char response[STRING_SIZE];
     for (;;) {
         read_fds = master; //copy of master
         if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) { //track ready sockets to read,write, supports multiplexing, read_fds is updated
@@ -125,19 +159,35 @@ int main(int argc, char **argv)
                         fdmax = newfd; //it is biggest socket number
 
                 } else { //if it is not listener, there is data from client
-                    if ((nbytes = recv(i, &user_data, sizeof(User), 0)) <= 0) {     //from i. connection,socket
+                    if ((nbytes = recv(i, &user_command, sizeof(user_command), 0)) <= 0) {     //from i. connection,socket
 
                         printf("Socket closed...\n");
                         close(i);    //connection,socket closed
                         FD_CLR(i, &master);   //it is removed from master set
 
                     } else { //if data is received from a client
-                      recv_time_t = time(NULL);
-                      if (recv_time_t != -1) {
-                        auth_recv_time = *localtime(&recv_time_t);
-                        strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
+                      printf("%s, %d \n", user_command, i);
+                      if(list[i].is_logged_in == 0)
+                      {
+                        char *token = strtok(user_command, " ");
+                        strcpy(list[i].user_name, token);
+                        
+                        token = strtok(user_command, " ");
+                        strcpy(list[i].user_pass, token);
+                        
+                        recv_time_t = time(NULL);
+                        if (recv_time_t != -1){
+                          auth_recv_time = *localtime(&recv_time_t);
+                          strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
+                        }
+                        list[i].is_logged_in = 1;
+                        
+                        printf("%s authenticated at %s \n", list[i].user_name, recv_time);
+                        sprintf(response, "%d", list[i].is_logged_in);
+                        send(i, &response, sizeof(response), 0);
                       }
-                      printf("%s joined at %s \n", user_data.user_name, recv_time);
+                      /* TODO Implement game logic */
+                      /* TODO Implement session system */
                     }
                 }
             }
