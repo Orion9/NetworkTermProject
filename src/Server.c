@@ -14,20 +14,23 @@
 
 /* Game Settings */
 typedef enum GameSigns {
-    EMPTY, O, X
+    EMPTY, X, O
 } GameSigns;
 
 typedef struct GameSettings {
     int table[FIELD_SIZE][FIELD_SIZE];
     char player_one_name[STRING_SIZE];
     char player_two_name[STRING_SIZE];
-    char winner;
+    int turn;
+    int winner;
 } GameSettings;
 
 /* Game room information */
 typedef struct Session {
     int room_key;
     char room_name[STRING_SIZE];
+    int room_full;
+    int game_ended;
     GameSettings game_settings;
 } Session;
 
@@ -35,6 +38,8 @@ typedef struct Session {
 typedef struct User {
     char user_name[STRING_SIZE];
     char user_pass[STRING_SIZE];
+    int is_playing;
+    int user_room_key;
     int is_logged_in;
 } User;
 
@@ -170,13 +175,17 @@ int main(int argc, char **argv)
 
                     } else { //if data is received from a client
                       printf("%s, %d \n", user_command, i);
+                      
+                      /* FIXME Disable already logged in option for closed sockets */
                       if(user_list[i].is_logged_in == 0)
                       {
                         char *token = strtok(user_command, " ");
                         strcpy(user_list[i].user_name, token);
+                        printf("user_list[i].user_name: %s \n", user_list[i].user_name);
                         
-                        token = strtok(user_command, " ");
+                        token = strtok(NULL, " ");
                         strcpy(user_list[i].user_pass, token);
+                        printf("user_list[i].user_pass: %s \n", user_list[i].user_pass);
                         
                         recv_time_t = time(NULL);
                         if (recv_time_t != -1){
@@ -205,12 +214,117 @@ int main(int argc, char **argv)
 
 void cmd_handler(int socket_fd, char **command)
 {
-  char *parsed_command = strtok(command, " ");
-  printf("PARSEDCMD: %s \n", parsed_command);
+  char tmp_command[STRING_SIZE];
+  strcpy(tmp_command, command);
+  
+  char *parsed_command = strtok(tmp_command, " ");
+  
   if (strncmp(parsed_command, "list", STRING_SIZE) == 0)
-  {
-    printf("LIST ENABLED, %s \n", session_list[0].room_name);
+  {  
+    int i = 0;
+    for (i = 0; i < 25; i++)
+    {
+      if(session_list[i].room_name[0] != '\0')
+      {
+        printf("%s \n", session_list[i].room_name);
+      }
+    }
+    
     send(socket_fd, &session_list, sizeof(session_list), 0);
+  }
+  else if (strncmp(parsed_command, "new", STRING_SIZE) == 0)
+  {
+    strcpy(tmp_command, command);
+    char *token = strtok(tmp_command, " ");
+    token = strtok(NULL, " ");
+    
+    printf("Player1 is trying to create %s \n",token);
+    
+    int i = 0;
+    for (i = 0; i < 25; i++)
+    {
+      if(session_list[i].room_name[0] == '\0')
+      {
+        break;
+      }
+    }
+    
+    strcpy(session_list[i].room_name, token);
+    session_list[i].room_key = i;
+    user_list[socket_fd].user_room_key = i;
+    session_list[i].room_full = 0;
+    strcpy(session_list[i].game_settings.player_one_name, user_list[socket_fd].user_name);
+    
+    printf("%s created room %d \n", user_list[socket_fd].user_name, session_list[i].room_key);
+    
+    //send(socket_fd, &session_list[i], sizeof(session_list[i]), 0);
+  }
+  else if (strncmp(parsed_command, "join", STRING_SIZE) == 0)
+  {
+    strcpy(tmp_command, command);
+    char *token = strtok(tmp_command, " ");
+    token = strtok(NULL, " ");
+    
+    printf("Player2 is trying to join %s \n",token);
+    
+    int i = 0;
+    for (i = 0; i < 25; i++)
+    {
+      if(strncmp(token, session_list[i].room_name, STRING_SIZE) == 0)
+      {
+        if(session_list[i].room_full == 1)
+        {
+          //Abort and send room full message
+        }
+        else
+        {
+          session_list[i].room_full = 1;
+          user_list[socket_fd].user_room_key = session_list[i].room_key;
+          strcpy(session_list[i].game_settings.player_two_name, user_list[socket_fd].user_name);
+          
+          printf("%s joined room %d \n", user_list[socket_fd].user_name, session_list[i].room_key);
+          
+          session_list[i].game_settings.turn = 1;
+          session_list[i].room_full = 1;
+          user_list[socket_fd].user_room_key = session_list[i].room_key;
+          strcpy(session_list[i].game_settings.player_two_name, user_list[socket_fd].user_name);
+          
+          printf("%s joined room %d \n", user_list[socket_fd].user_name, session_list[i].room_key);
+          
+          session_list[i].game_settings.turn = 1;
+          
+          send(i, &session_list[i], sizeof(session_list[i]), 0);
+          send(socket_fd, &session_list[i], sizeof(session_list[i]), 0);
+        }
+      }
+    }
+  }
+  else if (strncmp(parsed_command, "move", STRING_SIZE) == 0)
+  {
+    strcpy(tmp_command, command);
+    char *token = strtok(tmp_command, " ");
+    
+    char *x_char = strtok(NULL, " ");
+    int x = atoi(x_char);
+    char *y_char = strtok(NULL, " ");
+    int y = atoi(y_char);
+    
+    int i = 0;
+    for (i = 0; i < 25; i++)
+    {
+      if(user_list[socket_fd].user_room_key == session_list[i].room_key)
+        break;
+    }
+    if(session_list[i].game_settings.turn == 1)
+    {
+      session_list[i].game_settings.table[x][y] = 1;
+      session_list[i].game_settings.turn = 2;
+    }
+    else if(session_list[i].game_settings.turn == 2)
+    {
+      session_list[i].game_settings.table[x][y] = 2;
+      session_list[i].game_settings.turn = 1;
+    }
   }
 }
 

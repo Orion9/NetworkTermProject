@@ -27,27 +27,36 @@
 
 /* Game Settings */
 typedef enum GameSigns {
-    EMPTY, O, X
+  EMPTY, X, O
 } GameSigns;
 
 typedef struct GameSettings {
-    int table[FIELD_SIZE][FIELD_SIZE];
-    char player_one_name[STRING_SIZE];
-    char player_two_name[STRING_SIZE];
-    char winner;
+  int table[FIELD_SIZE][FIELD_SIZE];
+  char player_one_name[STRING_SIZE];
+  char player_two_name[STRING_SIZE];
+  int turn;
+  int winner;
 } GameSettings;
 
 /* Game room information */
 typedef struct Session {
-    int room_key;
-    char room_name[STRING_SIZE];
-    GameSettings game_settings;
+  int room_key;
+  char room_name[STRING_SIZE];
+  int room_full;
+  int game_ended;
+  GameSettings game_settings;
 } Session;
 
+/* User */
 typedef struct User {
   char user_name[STRING_SIZE];
-  char password[STRING_SIZE];
+  char user_pass[STRING_SIZE];
+  int is_playing;
+  int user_room_key;
+  int is_logged_in;
 } User;
+
+Session session_list[25];
 
 /* It will initialize game settings before game starts */
 extern void init_game(GameSettings **game_settings);
@@ -184,6 +193,11 @@ int main(int argc, char **argv)
           *position = '\0';
         }
         
+        if (strncmp(command, "quit", STRING_SIZE) == 0)
+        {
+          break;
+        }
+        
         send(socket_fd, &command, sizeof(command), 0);
         success = cmd_handler(socket_fd, &command);
         /* TODO Generate menu cases */
@@ -207,29 +221,143 @@ void print_menu()
 
 int cmd_handler(int socket_fd, char **command)
 {
-  char *parsed_command = strtok(command, " ");
-  printf("PARSEDCMD: %s \n", parsed_command);
+  char tmp_command[STRING_SIZE];
+  strcpy(tmp_command, command);
+  
+  char *parsed_command = strtok(tmp_command, " ");
+  
   if (strncmp(parsed_command, "list", STRING_SIZE) == 0)
   {
     int nbytes;
     Session tmp_list[25];
     system("\n");
-    if ((nbytes = recv(socket_fd, &tmp_list, sizeof(tmp_list), 0)) > 0 )
-    {
-      int i = 0;
+    
+    int i = 0;
+    if ((nbytes = recv(socket_fd, &session_list, sizeof(session_list), 0)) > 0 )
+    {  
       for (i = 0; i < 25; i++)
       {
-        if(tmp_list[i].room_name[0] != '\0')
+        if(session_list[i].room_name[0] != '\0')
         {
-          printf("%s \n", tmp_list[i].room_name);
+          printf("%s \n", session_list[i].room_name);
         }
+      }
+    }
+  }
+  else if (strncmp(parsed_command, "new", STRING_SIZE) == 0)
+  {
+    strcpy(tmp_command, command);
+    char *room_name = strtok(tmp_command, " ");
+    room_name = strtok(NULL, " ");
+    
+    printf("Created room: %s \n", room_name);
+    
+    int nbytes;
+    char *join_message;
+    Session tmp_session;
+    while ((nbytes = recv(socket_fd, &tmp_session, sizeof(tmp_session), 0)) > 0 )
+    {
+      if (tmp_session.room_full == 1)
+      {
+        printf("Another player has joined your game");
+        if(tmp_session.game_settings.turn == 1)
+        {
+          /* print table here */
+          char move_command[STRING_SIZE];
+          printf("[move [Col] [Row]]: ");
+          fgets(move_command, STRING_SIZE, stdin);
+          /* Remove trailing new line char */
+          char *position;
+          if((position = strchr(move_command, '\n')) != NULL){
+            *position = '\0';
+          }
+          
+          send(socket_fd, &move_command, sizeof(move_command), 0);
+        }
+      }
+      
+      if (tmp_session.game_settings.winner )
+      {
+        if(tmp_session.game_settings.winner == 1)
+          printf("You Win!");
+        else if(tmp_session.game_settings.winner == 2)
+          printf("You Lost!");
+        break;
       }
     }
   }
   else if (strncmp(parsed_command, "join", STRING_SIZE) == 0)
   {
+    strcpy(tmp_command, command);
+    char *room_name = strtok(tmp_command, " ");
+    room_name = strtok(NULL, " ");
     
+    printf("Joined room: %s \n", room_name);
+    int nbytes, is_game_finished = 0;
+    Session tmp_session;
+    char move_command[STRING_SIZE];
+    
+    while (1)
+    {
+      if ((nbytes = recv(socket_fd, &tmp_session, sizeof(tmp_session), 0)) <= 0)
+      {
+        printf("Conn fault. \n");
+        break;
+      }
+      else
+      {
+        printf("%d", tmp_session.room_full);
+        if (tmp_session.room_full != 1)
+        {
+          printf("You have joined a game");
+          if(tmp_session.game_settings.turn == 2)
+          {
+            int i = 0;
+            int j = 0;
+            for(i = 0; i < 3; i++)
+            {
+              for (j = 0; j < 3; j++)
+              {
+                if (tmp_session.game_settings.table[i][j] == 1)
+                {
+                  printf("X");
+                }
+                else if (tmp_session.game_settings.table[i][j] == 2)
+                {
+                  printf("O");
+                }
+                else
+                {
+                  printf(" ");
+                }
+                printf(" | ");
+              }
+              printf("\n");
+            }
+            
+            char move_command[STRING_SIZE];
+            printf("[move [Col] [Row]]: ");
+            fgets(move_command, STRING_SIZE, stdin);
+            /* Remove trailing new line char */
+            char *position;
+            if((position = strchr(move_command, '\n')) != NULL){
+              *position = '\0';
+            }
+            
+            send(socket_fd, &move_command, sizeof(move_command), 0);
+          }
+        }
+        
+        if (tmp_session.game_settings.winner )
+        {
+          if(tmp_session.game_settings.winner == 1)
+            printf("You Lose!");
+          else if(tmp_session.game_settings.winner == 2)
+            printf("You Win!");
+          break;
+        }
+      }
+    }
   }
   return 1;
 }
-
