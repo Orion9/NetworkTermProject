@@ -25,12 +25,11 @@ typedef struct GameSettings {
 } GameSettings;
 
 /* Game room information */
-typedef struct SessionList {
+typedef struct Session {
     int room_key;
     char room_name[STRING_SIZE];
     GameSettings game_settings;
-    struct SessionList *next;
-} SessionList;
+} Session;
 
 /* User */
 typedef struct User {
@@ -45,7 +44,8 @@ typedef struct UserList {
     struct UserList *next;
 } UserList;
 
-User list[50];
+User user_list[50];
+Session session_list[25];
 
 /* It will initialize game settings before game starts */
 extern void init_game(GameSettings **game_settings);
@@ -63,13 +63,13 @@ extern int join_session(char **player);
 extern void print_menu();
 
 /* Prints list of all game rooms */
-extern void list_games(SessionList **game_list);
+extern void list_games(Session **game_list);
 
 /* Prints current game */
 extern void print_game();
 
 /* Command Handler */
-extern void cmd_handler(char command[STRING_SIZE]);
+extern void cmd_handler(int socket_fd, char **command);
 
 int main(int argc, char **argv)
 {
@@ -81,8 +81,11 @@ int main(int argc, char **argv)
     int a = 0;
     for (a = 0; a < 50; a++)
     {
-      list[a].is_logged_in = 0;
+        user_list[a].is_logged_in = 0;
     }
+    
+    strcpy(session_list[0].room_name, "ANAN GAME");
+    strcpy(session_list[1].room_name, "ANAN GAME 2");
 
     fd_set master; //master file descriptor list
     fd_set read_fds; //copy of master file descriptor list which is temp
@@ -148,7 +151,7 @@ int main(int argc, char **argv)
         if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) { //track ready sockets to read,write, supports multiplexing, read_fds is updated
             exit(1);    //EXIT FAILURE
         }
-        for (i = 0; i <= fdmax; i++) { //all list is controlled
+        for (i = 0; i <= fdmax; i++) { //all list is controlledcommand
             if (FD_ISSET(i, &read_fds)) {     //if it is in temp list
                 if (i == listener) { //if it is listener, there is new connection
                     addrlen = sizeof(clientaddr);
@@ -167,24 +170,28 @@ int main(int argc, char **argv)
 
                     } else { //if data is received from a client
                       printf("%s, %d \n", user_command, i);
-                      if(list[i].is_logged_in == 0)
+                      if(user_list[i].is_logged_in == 0)
                       {
                         char *token = strtok(user_command, " ");
-                        strcpy(list[i].user_name, token);
+                        strcpy(user_list[i].user_name, token);
                         
                         token = strtok(user_command, " ");
-                        strcpy(list[i].user_pass, token);
+                        strcpy(user_list[i].user_pass, token);
                         
                         recv_time_t = time(NULL);
                         if (recv_time_t != -1){
                           auth_recv_time = *localtime(&recv_time_t);
                           strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
                         }
-                        list[i].is_logged_in = 1;
+                        user_list[i].is_logged_in = 1;
                         
-                        printf("%s authenticated at %s \n", list[i].user_name, recv_time);
-                        sprintf(response, "%d", list[i].is_logged_in);
+                        printf("%s authenticated at %s \n", user_list[i].user_name, recv_time);
+                        sprintf(response, "%d", user_list[i].is_logged_in);
                         send(i, &response, sizeof(response), 0);
+                      }
+                      else 
+                      {
+                        cmd_handler(i, &user_command);
                       }
                       /* TODO Implement game logic */
                       /* TODO Implement session system */
@@ -195,5 +202,19 @@ int main(int argc, char **argv)
     }
     return 0;
 }
+
+void cmd_handler(int socket_fd, char **command)
+{
+  char *parsed_command = strtok(command, " ");
+  printf("PARSEDCMD: %s \n", parsed_command);
+  if (strncmp(parsed_command, "list", STRING_SIZE) == 0)
+  {
+    printf("LIST ENABLED, %s \n", session_list[0].room_name);
+    send(socket_fd, &session_list, sizeof(session_list), 0);
+  }
+}
+
+
+
 
 

@@ -71,7 +71,7 @@ extern void list_games(Session **game_list);
 extern void print_game();
 
 /* Command Handler */
-extern void cmd_handler(char command[STRING_SIZE]);
+int cmd_handler(int socket_fd, char **command);
 
 int main(int argc, char **argv)
 {
@@ -128,6 +128,8 @@ int main(int argc, char **argv)
     char recv_time[STRING_SIZE];
     char command[STRING_SIZE];
     char response[STRING_SIZE];
+    
+    int success = 0;
     /* TODO Cleanup the code a little bit after learn FD */
     while (1) {
         read_fds = master;
@@ -176,25 +178,16 @@ int main(int argc, char **argv)
         }
         print_menu();
         fgets(command, STRING_SIZE, stdin);
+        
+        /* Remove trailing new line char */
+        if((position = strchr(command, '\n')) != NULL){
+          *position = '\0';
+        }
+        
         send(socket_fd, &command, sizeof(command), 0);
+        success = cmd_handler(socket_fd, &command);
         /* TODO Generate menu cases */
-        /* TODO Learn dafuq is this below */
-        /*
-        for (i = 0; i <= fdmax; i++)
-            if (FD_ISSET(i, &read_fds)) {
-              /* Ready for write   
-              if (i == 0) {
-                
-                fgets(send_buf, BUFSIZE, stdin);
-                 
-                if (strcmp(send_buf, "quit\n") == 0) {
-                  exit(0);
-                /* Sending data to server 
-                } else if (send(socket_fd, send_buf, strlen(send_buf), 0)) {
-                   printf(">message is sended\n");
-                }
-            }
-        }*/
+        
     }
     printf("Good bye! \n");
     close(socket_fd);    //socket is closed
@@ -203,10 +196,40 @@ int main(int argc, char **argv)
 
 void print_menu()
 {
-  system("clear");
+  system("\n");
   printf("XOX Multi Showdown! \n");
   printf("Use 'new' for Create New Session \n");
   printf("Use 'list' for See Available Sessions \n");
+  printf("Use 'join [Session Number]' for Join a Session \n");
   printf("Use 'quit' for Quit \n");
-  printf("[new, list, quit]: ");
+  printf("[new, list, join, quit]: ");
 }
+
+int cmd_handler(int socket_fd, char **command)
+{
+  char *parsed_command = strtok(command, " ");
+  printf("PARSEDCMD: %s \n", parsed_command);
+  if (strncmp(parsed_command, "list", STRING_SIZE) == 0)
+  {
+    int nbytes;
+    Session tmp_list[25];
+    system("\n");
+    if ((nbytes = recv(socket_fd, &tmp_list, sizeof(tmp_list), 0)) > 0 )
+    {
+      int i = 0;
+      for (i = 0; i < 25; i++)
+      {
+        if(tmp_list[i].room_name[0] != '\0')
+        {
+          printf("%s \n", tmp_list[i].room_name);
+        }
+      }
+    }
+  }
+  else if (strncmp(parsed_command, "join", STRING_SIZE) == 0)
+  {
+    
+  }
+  return 1;
+}
+
