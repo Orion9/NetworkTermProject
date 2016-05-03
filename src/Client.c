@@ -241,7 +241,8 @@ int cmd_handler(int socket_fd, char **command)
         Session tmp_session;
         while (1) {
             if (nbytes = recv(socket_fd, &tmp_session, sizeof(tmp_session), 0) <= 0) {
-                printf("Conn gg. \n");
+                printf("RIP Conn. \n");
+                exit(1);
             } else {
                 if (tmp_session.room_full == 1) {
                     if (tmp_session.game_settings.winner != 0) {
@@ -336,7 +337,7 @@ int cmd_handler(int socket_fd, char **command)
 
         while (1) {
             if (nbytes = recv(socket_fd, &tmp_session, sizeof(tmp_session), 0) <= 0) {
-                printf("Conn gg. \n");
+                printf("RIP Conn. \n");
                 exit(1);
             } else {
                 if (tmp_session.room_full == 1) {
@@ -360,7 +361,7 @@ int cmd_handler(int socket_fd, char **command)
                             strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
                         }
                         printf("%s joined at %s \n\n", tmp_session.game_settings.player_two_name, recv_time);
-                        printf("Game is starting");
+                        printf("Game is starting \n");
                     } else if (tmp_session.game_settings.turn == 2) {
                         int i = 0;
                         int j = 0;
