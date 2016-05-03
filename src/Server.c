@@ -196,6 +196,7 @@ int main(int argc, char **argv)
                         
                         if (is_found == 1)
                         {
+                          printf("Player is returning... \n");
                           if (strncmp(returned_list[a].user_name, tmp_name, STRING_SIZE) == 0 
                             && strncmp(returned_list[a].user_pass, tmp_pass, STRING_SIZE) == 0 )
                           {
@@ -217,6 +218,7 @@ int main(int argc, char **argv)
                         }
                         else
                         {
+                          printf("A new player! \n");
                           for (a = 0; a < 50; a++)
                           {
                             if (returned_list[a].user_name[0] == '\0')
@@ -314,7 +316,7 @@ void cmd_handler(int socket_fd, char **command)
     //send(socket_fd, &session_list[i], sizeof(session_list[i]), 0);
   }
   else if (strncmp(parsed_command, "join", STRING_SIZE) == 0)
-  {
+  {gg
     strcpy(tmp_command, command);
     char *token = strtok(tmp_command, " ");
     token = strtok(NULL, " ");
