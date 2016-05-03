@@ -21,6 +21,8 @@ typedef struct GameSettings {
     int table[FIELD_SIZE][FIELD_SIZE];
     char player_one_name[STRING_SIZE];
     char player_two_name[STRING_SIZE];
+    int player_one_socket;
+    int player_two_socket;
     int turn;
     int winner;
 } GameSettings;
@@ -88,9 +90,6 @@ int main(int argc, char **argv)
     {
         user_list[a].is_logged_in = 0;
     }
-    
-    strcpy(session_list[0].room_name, "ANAN GAME");
-    strcpy(session_list[1].room_name, "ANAN GAME 2");
 
     fd_set master; //master file descriptor list
     fd_set read_fds; //copy of master file descriptor list which is temp
@@ -253,7 +252,9 @@ void cmd_handler(int socket_fd, char **command)
     session_list[i].room_key = i;
     user_list[socket_fd].user_room_key = i;
     session_list[i].room_full = 0;
+    session_list[i].game_settings.winner = 0;
     strcpy(session_list[i].game_settings.player_one_name, user_list[socket_fd].user_name);
+    session_list[i].game_settings.player_one_socket = socket_fd;
     
     printf("%s created room %d \n", user_list[socket_fd].user_name, session_list[i].room_key);
     
@@ -278,23 +279,24 @@ void cmd_handler(int socket_fd, char **command)
         }
         else
         {
+          printf("ROOMAN: %s \n", session_list[i].room_name);
+          printf("ROOMAN: %d \n", session_list[i].game_settings.winner);
           session_list[i].room_full = 1;
           user_list[socket_fd].user_room_key = session_list[i].room_key;
           strcpy(session_list[i].game_settings.player_two_name, user_list[socket_fd].user_name);
           
           printf("%s joined room %d \n", user_list[socket_fd].user_name, session_list[i].room_key);
           
-          session_list[i].game_settings.turn = 1;
+          session_list[i].game_settings.turn = 0;
           session_list[i].room_full = 1;
           user_list[socket_fd].user_room_key = session_list[i].room_key;
           strcpy(session_list[i].game_settings.player_two_name, user_list[socket_fd].user_name);
+          session_list[i].game_settings.player_two_socket = socket_fd;
           
           printf("%s joined room %d \n", user_list[socket_fd].user_name, session_list[i].room_key);
           
-          session_list[i].game_settings.turn = 1;
-          
-          send(i, &session_list[i], sizeof(session_list[i]), 0);
-          send(socket_fd, &session_list[i], sizeof(session_list[i]), 0);
+          send(session_list[i].game_settings.player_one_socket, &session_list[i], sizeof(session_list[i]), 0);
+          send(session_list[i].game_settings.player_two_socket, &session_list[i], sizeof(session_list[i]), 0);
         }
       }
     }
@@ -304,10 +306,12 @@ void cmd_handler(int socket_fd, char **command)
     strcpy(tmp_command, command);
     char *token = strtok(tmp_command, " ");
     
-    char *x_char = strtok(NULL, " ");
-    int x = atoi(x_char);
-    char *y_char = strtok(NULL, " ");
-    int y = atoi(y_char);
+    token = strtok(NULL, " ");
+    int x = atoi(token);
+    token = strtok(NULL, " ");
+    int y = atoi(token);
+    
+    printf("Player wants to move to %d %d poisiton \n", x, y);
     
     int i = 0;
     for (i = 0; i < 25; i++)
@@ -315,18 +319,116 @@ void cmd_handler(int socket_fd, char **command)
       if(user_list[socket_fd].user_room_key == session_list[i].room_key)
         break;
     }
+    
+    printf("Game Session %s \n", session_list[i].room_name);
+    
+    //Check Victory
+    int a = 0;
+    int b = 0;
+    int v_1_count = 0;
+    int h_1_count = 0;
+    int v_2_count = 0;
+    int h_2_count = 0;
+   
+    //Check Horizontal Lines
+    for(a = 0; a < 3; a++){
+      for(b = 0; b < 3; b++){
+        if(session_list[i].game_settings.table[a][b] == 1)
+          h_1_count = h_1_count + 1;
+        else if(session_list[i].game_settings.table[a][b] == 2)  
+          h_2_count = h_2_count + 1;
+      }
+      if(h_1_count == 3)
+        session_list[i].game_settings.winner = 1;
+      if(h_2_count == 3)
+        session_list[i].game_settings.winner = 2;
+      h_1_count = 0;
+      h_2_count = 0;
+    }
+    //Check Vertical Lines
+    for(a = 0; a < 3; a++){
+      for(b = 0; b < 3; b++){
+        if(session_list[i].game_settings.table[b][a] == 1)
+          h_1_count = h_1_count + 1;
+        else if(session_list[i].game_settings.table[b][a] == 2)  
+          h_2_count = h_2_count + 1;
+      }
+      if(h_1_count == 3)
+        session_list[i].game_settings.winner = 1;
+      if(h_2_count == 3)
+        session_list[i].game_settings.winner = 2;
+      h_1_count = 0;
+      h_2_count = 0;
+    }
+    //Check Diagonal Lines
+    if((session_list[i].game_settings.table[0][0] == 1) &&
+      (session_list[i].game_settings.table[1][1] == 1) &&
+      (session_list[i].game_settings.table[2][2] == 1))
+      session_list[i].game_settings.winner = 1;
+    
+    if((session_list[i].game_settings.table[0][0] == 2) &&
+      (session_list[i].game_settings.table[1][1] == 2) &&
+      (session_list[i].game_settings.table[2][2] == 2))
+      session_list[i].game_settings.winner = 2;
+    
+    if((session_list[i].game_settings.table[0][2] == 1) &&
+      (session_list[i].game_settings.table[1][1] == 1) &&
+      (session_list[i].game_settings.table[2][0] == 1))
+      session_list[i].game_settings.winner = 1;
+    
+    if((session_list[i].game_settings.table[0][2] == 2) &&
+      (session_list[i].game_settings.table[1][1] == 2) &&
+      (session_list[i].game_settings.table[2][0] == 2))
+      session_list[i].game_settings.winner = 2;
+    
+    int check_draw = 0;
+    if(session_list[i].game_settings.winner == 0 ){
+      for(a = 0; a < 3; a++){
+        for(b = 0; b < 3; b++){
+          if(session_list[i].game_settings.table[a][b] != 0)
+           check_draw = check_draw + 1;
+        }
+      }
+    }
+    
+    if(check_draw == 9){
+      session_list[i].game_settings.winner = 3;
+    }    
+    
+    if(session_list[i].game_settings.turn == 0)
+      session_list[i].game_settings.turn = 1;
+    
     if(session_list[i].game_settings.turn == 1)
     {
+      printf("%s has made a move \n",session_list[i].game_settings.player_one_name);
       session_list[i].game_settings.table[x][y] = 1;
       session_list[i].game_settings.turn = 2;
+      send(session_list[i].game_settings.player_two_socket, &session_list[i], sizeof(session_list[i]), 0);
+      if(session_list[i].game_settings.winner > 0){
+        session_list[i].game_settings.turn = 1;
+        send(session_list[i].game_settings.player_one_socket, &session_list[i], sizeof(session_list[i]), 0);
+      }
     }
     else if(session_list[i].game_settings.turn == 2)
     {
+      printf("%s has made a move \n",session_list[i].game_settings.player_two_name);
       session_list[i].game_settings.table[x][y] = 2;
       session_list[i].game_settings.turn = 1;
+      send(session_list[i].game_settings.player_one_socket, &session_list[i], sizeof(session_list[i]), 0);
+      if(session_list[i].game_settings.winner > 0){
+        session_list[i].game_settings.turn = 2;
+        send(session_list[i].game_settings.player_two_socket, &session_list[i], sizeof(session_list[i]), 0);
+      }
+    }
+    
+    if(session_list[i].game_settings.winner > 0){
+      Session tmp_session;
+      session_list[i] = tmp_session;
+      
     }
   }
 }
+
 
 
 

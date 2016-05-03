@@ -34,6 +34,8 @@ typedef struct GameSettings {
   int table[FIELD_SIZE][FIELD_SIZE];
   char player_one_name[STRING_SIZE];
   char player_two_name[STRING_SIZE];
+  int player_one_socket;
+  int player_two_socket;
   int turn;
   int winner;
 } GameSettings;
@@ -55,6 +57,12 @@ typedef struct User {
   int user_room_key;
   int is_logged_in;
 } User;
+
+/* User list */
+typedef struct UserList {
+  User user;
+  struct UserList *next;
+} UserList;
 
 Session session_list[25];
 
@@ -255,34 +263,94 @@ int cmd_handler(int socket_fd, char **command)
     int nbytes;
     char *join_message;
     Session tmp_session;
-    while ((nbytes = recv(socket_fd, &tmp_session, sizeof(tmp_session), 0)) > 0 )
+    while ( 1 )
     {
-      if (tmp_session.room_full == 1)
+      if (nbytes = recv(socket_fd, &tmp_session, sizeof(tmp_session), 0) <= 0)
       {
-        printf("Another player has joined your game");
-        if(tmp_session.game_settings.turn == 1)
-        {
-          /* print table here */
-          char move_command[STRING_SIZE];
-          printf("[move [Col] [Row]]: ");
-          fgets(move_command, STRING_SIZE, stdin);
-          /* Remove trailing new line char */
-          char *position;
-          if((position = strchr(move_command, '\n')) != NULL){
-            *position = '\0';
-          }
-          
-          send(socket_fd, &move_command, sizeof(move_command), 0);
-        }
+        printf("Conn gg. \n");
       }
-      
-      if (tmp_session.game_settings.winner )
+      else
       {
-        if(tmp_session.game_settings.winner == 1)
-          printf("You Win!");
-        else if(tmp_session.game_settings.winner == 2)
-          printf("You Lost!");
-        break;
+        if (tmp_session.room_full == 1)
+        {
+          if(tmp_session.game_settings.turn == 0)
+          {
+            printf("Another player has joined your game \n");
+            tmp_session.game_settings.turn = 1;
+          }
+          if(tmp_session.game_settings.turn == 1)
+          {
+            int i = 0;
+            int j = 0;
+            for(i = 0; i < 3; i++)
+            {
+              for (j = 0; j < 3; j++)
+              {
+                if (tmp_session.game_settings.table[i][j] == 1)
+                {
+                  printf("X");
+                }
+                else if (tmp_session.game_settings.table[i][j] == 2)
+                {
+                  printf("O");
+                }
+                else
+                {
+                  printf(" ");
+                }
+                printf(" | ");
+              }
+              printf("\n");
+            }
+            char move_command[STRING_SIZE];
+            char tmp_test[STRING_SIZE];
+            int check_move = 0;
+            while(check_move == 0){
+              check_move = 1;
+              
+              printf("[move [Col] [Row]]: ");
+              fgets(move_command, STRING_SIZE, stdin);
+              /* Remove trailing new line char */
+              char *position;
+              if((position = strchr(move_command, '\n')) != NULL){
+                *position = '\0';
+              }
+              
+              /* Test move */
+              strcpy(tmp_test, move_command);
+              char *test = strtok(tmp_test, " ");
+              test = strtok(NULL, " ");
+              int x = atoi(test);
+              test = strtok(NULL, " ");
+              int y = atoi(test);
+              
+              if(x < 0 || x > 2 || y < 0 || x > 2 )
+              {
+                printf("Impossible Move");
+                check_move = 0;
+              }
+              if(tmp_session.game_settings.table[x][y] != 0)
+              {
+                printf("Impossible Move");
+                check_move = 0;
+              }
+            }
+            
+            send(socket_fd, &move_command, sizeof(move_command), 0);
+          }
+        }
+        
+        if (tmp_session.game_settings.winner != 0)
+        {
+          printf("Game Ended %d\n", tmp_session.game_settings.winner);
+          if(tmp_session.game_settings.winner == 1)
+            printf("You Win!");
+          else if(tmp_session.game_settings.winner == 2)
+            printf("You Lost!");
+          else if(tmp_session.game_settings.winner == 3)
+            printf("Draw!");
+          break;
+        }
       }
     }
   }
@@ -299,18 +367,17 @@ int cmd_handler(int socket_fd, char **command)
     
     while (1)
     {
-      if ((nbytes = recv(socket_fd, &tmp_session, sizeof(tmp_session), 0)) <= 0)
+      if (nbytes = recv(socket_fd, &tmp_session, sizeof(tmp_session), 0) <= 0)
       {
-        printf("Conn fault. \n");
-        break;
+        printf("Conn gg. \n");
       }
       else
       {
-        printf("%d", tmp_session.room_full);
-        if (tmp_session.room_full != 1)
+        if (tmp_session.room_full == 1)
         {
-          printf("You have joined a game");
-          if(tmp_session.game_settings.turn == 2)
+          if(tmp_session.game_settings.turn == 0)
+            printf("You have joined a game \n");
+          else if(tmp_session.game_settings.turn == 2)
           {
             int i = 0;
             int j = 0;
@@ -336,12 +403,37 @@ int cmd_handler(int socket_fd, char **command)
             }
             
             char move_command[STRING_SIZE];
-            printf("[move [Col] [Row]]: ");
-            fgets(move_command, STRING_SIZE, stdin);
-            /* Remove trailing new line char */
-            char *position;
-            if((position = strchr(move_command, '\n')) != NULL){
-              *position = '\0';
+            char tmp_test[STRING_SIZE];
+            int check_move = 0;
+            while(check_move == 0){
+              check_move = 1;
+              
+              printf("[move [Col] [Row]]: ");
+              fgets(move_command, STRING_SIZE, stdin);
+              /* Remove trailing new line char */
+              char *position;
+              if((position = strchr(move_command, '\n')) != NULL){
+                *position = '\0';
+              }
+              
+              /* Test move */
+              strcpy(tmp_test, move_command);
+              char *test = strtok(tmp_test, " ");
+              test = strtok(NULL, " ");
+              int x = atoi(test);
+              test = strtok(NULL, " ");
+              int y = atoi(test);
+              
+              if(x < 0 || x > 2 || y < 0 || x > 2 )
+              {
+                printf("Impossible Move");
+                check_move = 0;
+              }
+              if(tmp_session.game_settings.table[x][y] != 0)
+              {
+                printf("Impossible Move");
+                check_move = 0;
+              }
             }
             
             send(socket_fd, &move_command, sizeof(move_command), 0);
@@ -354,6 +446,8 @@ int cmd_handler(int socket_fd, char **command)
             printf("You Lose!");
           else if(tmp_session.game_settings.winner == 2)
             printf("You Win!");
+          else if(tmp_session.game_settings.winner == 3)
+            printf("Draw!");
           break;
         }
       }
