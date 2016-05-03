@@ -124,7 +124,7 @@ int main(int argc, char **argv)
         printf("Socket cannot be used!!!\n");
         exit(1);    //EXIT FAILURE
     }
-    printf("Socket is being used...\n");
+    //printf("Socket is being used...\n");
 
     serveraddr.sin_family = AF_INET;
     serveraddr.sin_addr.s_addr = INADDR_ANY; //use my IP address
@@ -159,12 +159,22 @@ int main(int argc, char **argv)
             if (FD_ISSET(i, &read_fds)) {     //if it is in temp list
                 if (i == listener) { //if it is listener, there is new connection
                     addrlen = sizeof(clientaddr);
-
+                    
+                    if(fdmax - 3 > 0)
+                      printf("Server multiplex sockets...\n");
+                    else
+                      printf("There is only one connection...\n");
+                    
                     newfd = accept(listener, (struct sockaddr *) &clientaddr, &addrlen);   //accept connect request of client and return new socket for this connection
+                    printf("Server accepts connection request of Client...\n");
                     FD_SET(newfd, &master);   // add new socket to master set
                     if (newfd > fdmax)
-                        fdmax = newfd; //it is biggest socket number
-
+                        fdmax = newfd; //it is biggest socket number 
+                    char client_address[INET_ADDRSTRLEN];
+                    if (inet_ntop(AF_INET, &clientaddr.sin_addr.s_addr, client_address, sizeof(client_address)) != NULL)
+                    {
+                      printf("New connection from %s on socket %d ...\n", client_address, newfd);
+                    }
                 } else { //if it is not listener, there is data from client
                     if ((nbytes = recv(i, &user_command, sizeof(user_command), 0)) <= 0) {     //from i. connection,socket
                         user_list[i].is_logged_in = 0;
@@ -173,7 +183,7 @@ int main(int argc, char **argv)
                         FD_CLR(i, &master);   //it is removed from master set
 
                     } else { //if data is received from a client
-                      printf("%s, %d \n", user_command, i);
+                      //printf("%s, %d \n", user_command, i);
                       
                       
                       if(user_list[i].is_logged_in == 0)
@@ -284,7 +294,16 @@ void cmd_handler(int socket_fd, char **command)
     strcpy(session_list[i].game_settings.player_one_name, user_list[socket_fd].user_name);
     session_list[i].game_settings.player_one_socket = socket_fd;
     
-    printf("%s created room %d \n", user_list[socket_fd].user_name, session_list[i].room_key);
+    struct tm auth_recv_time;
+    time_t recv_time_t;
+    char recv_time[STRING_SIZE];
+    recv_time_t = time(NULL);
+    if (recv_time_t != -1){
+      auth_recv_time = *localtime(&recv_time_t);
+      strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
+    }
+    
+    printf("%s created the Game Session %d at %s \n", user_list[socket_fd].user_name, session_list[i].room_key, recv_time);
     
     //send(socket_fd, &session_list[i], sizeof(session_list[i]), 0);
   }
@@ -306,22 +325,23 @@ void cmd_handler(int socket_fd, char **command)
           //Abort and send room full message
         }
         else
-        {
-          printf("ROOMAN: %s \n", session_list[i].room_name);
-          printf("ROOMAN: %d \n", session_list[i].game_settings.winner);
-          session_list[i].room_full = 1;
-          user_list[socket_fd].user_room_key = session_list[i].room_key;
-          strcpy(session_list[i].game_settings.player_two_name, user_list[socket_fd].user_name);
-          
-          printf("%s joined room %d \n", user_list[socket_fd].user_name, session_list[i].room_key);
-          
+        {        
           session_list[i].game_settings.turn = 0;
           session_list[i].room_full = 1;
           user_list[socket_fd].user_room_key = session_list[i].room_key;
           strcpy(session_list[i].game_settings.player_two_name, user_list[socket_fd].user_name);
           session_list[i].game_settings.player_two_socket = socket_fd;
           
-          printf("%s joined room %d \n", user_list[socket_fd].user_name, session_list[i].room_key);
+          struct tm auth_recv_time;
+          time_t recv_time_t;
+          char recv_time[STRING_SIZE];
+          recv_time_t = time(NULL);
+          if (recv_time_t != -1){
+            auth_recv_time = *localtime(&recv_time_t);
+            strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
+          }
+          
+          printf("%s joined the Game Session %d at %s \n", user_list[socket_fd].user_name, session_list[i].room_key, recv_time);
           
           send(session_list[i].game_settings.player_one_socket, &session_list[i], sizeof(session_list[i]), 0);
           send(session_list[i].game_settings.player_two_socket, &session_list[i], sizeof(session_list[i]), 0);

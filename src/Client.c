@@ -110,6 +110,10 @@ int main(int argc, char **argv)
         printf("Error (1): Socket creation failed!\n");
         exit(1);
     }
+    else
+    {
+      printf("Socket is created...\n");
+    }
 
     /* Network Family */
     server_addr.sin_family = AF_INET;
@@ -123,10 +127,15 @@ int main(int argc, char **argv)
     memset(server_addr.sin_zero, '\0', sizeof server_addr.sin_zero);  //sin_zero is fulled by 0
 
     /* Connection Request */
+    printf("Clients sends connection request to server...\n");
     int conn_result = connect(socket_fd, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
     if (conn_result == -1) {
         printf("Error (2): Connection request has been failed!\n");
         exit(2);
+    }
+    else
+    {
+        printf("Connection established...\n");
     }
 
     /* File Descriptor Settings */
@@ -177,7 +186,7 @@ int main(int argc, char **argv)
             }
             else
             {
-              printf("response is %s \n", response);
+              //printf("response is %s \n", response);
               if (atoi(response) == 0)
               {
                 printf("Wrong pass or name! \n");
@@ -226,10 +235,10 @@ void print_menu()
 {
   system("\n");
   printf("XOX Multi Showdown! \n");
-  printf("Use 'new' for Create New Session \n");
-  printf("Use 'list' for See Available Sessions \n");
-  printf("Use 'join [Session Number]' for Join a Session \n");
-  printf("Use 'quit' for Quit \n");
+  printf("Use 'new [Session Name]' to Create New Session \n");
+  printf("Use 'list' to See Available Sessions \n");
+  printf("Use 'join [Session Name]' to Join a Session \n");
+  printf("Use 'quit' to Quit \n");
   printf("[new, list, join, quit]: ");
 }
 
@@ -292,7 +301,17 @@ int cmd_handler(int socket_fd, char **command)
           }
           if(tmp_session.game_settings.turn == 0)
           {
-            printf("Another player has joined your game \n");
+            //printf("Another player has joined your game \n");
+            struct tm auth_recv_time;
+            time_t recv_time_t;
+            char recv_time[STRING_SIZE];
+            recv_time_t = time(NULL);
+            if (recv_time_t != -1){
+              auth_recv_time = *localtime(&recv_time_t);
+              strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
+            }
+            printf("%s joined at %s \n\n", tmp_session.game_settings.player_two_name, recv_time);
+            printf("Game is starting\n");
             tmp_session.game_settings.turn = 1;
           }
           if(tmp_session.game_settings.turn == 1)
@@ -354,6 +373,7 @@ int cmd_handler(int socket_fd, char **command)
             }
             
             send(socket_fd, &move_command, sizeof(move_command), 0);
+            
           }
         }
         
@@ -394,7 +414,19 @@ int cmd_handler(int socket_fd, char **command)
             break;
           }
           if(tmp_session.game_settings.turn == 0)
-            printf("You have joined a game \n");
+          { 
+            //printf("You have joined a game \n");
+            struct tm auth_recv_time;
+            time_t recv_time_t;
+            char recv_time[STRING_SIZE];
+            recv_time_t = time(NULL);
+            if (recv_time_t != -1){
+              auth_recv_time = *localtime(&recv_time_t);
+              strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
+            }
+            printf("%s joined at %s \n\n", tmp_session.game_settings.player_two_name, recv_time);
+            printf("Game is starting");
+          }
           else if(tmp_session.game_settings.turn == 2)
           {
             int i = 0;
