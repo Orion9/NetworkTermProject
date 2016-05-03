@@ -316,7 +316,7 @@ void cmd_handler(int socket_fd, char **command)
     //send(socket_fd, &session_list[i], sizeof(session_list[i]), 0);
   }
   else if (strncmp(parsed_command, "join", STRING_SIZE) == 0)
-  {gg
+  {
     strcpy(tmp_command, command);
     char *token = strtok(tmp_command, " ");
     token = strtok(NULL, " ");
@@ -331,6 +331,11 @@ void cmd_handler(int socket_fd, char **command)
         if(session_list[i].room_full == 1)
         {
           //Abort and send room full message
+          Session tmp_session;
+          tmp_session = session_list[i];
+          tmp_session.room_name[0] = '\0';
+          send(socket_fd, &tmp_session, sizeof(tmp_session), 0);
+          printf("%s tried to join a full game.\n", user_list[socket_fd].user_name);
         }
         else
         {        

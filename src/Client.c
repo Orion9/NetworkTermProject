@@ -76,6 +76,8 @@ extern void print_menu();
 /* Command Handler */
 int cmd_handler(int socket_fd, char **command);
 
+User user_info;
+
 int main(int argc, char **argv)
 {
     if (argc <= 2) {
@@ -129,7 +131,7 @@ int main(int argc, char **argv)
     fdmax = socket_fd;
 
     int i = 0, is_user_login = 0;
-    User user_info;
+    
     time_t auth;
     struct tm auth_time;
     char *position;
@@ -307,12 +309,12 @@ int cmd_handler(int socket_fd, char **command)
                             test = strtok(NULL, " ");
                             int y = atoi(test);
 
-                            if (x < 0 || x > 2 || y < 0 || x > 2) {
-                                printf("Impossible Move");
+                            if (x < 0 || y > 2 || y < 0 || x > 2) {
+                                printf("Impossible Move \n");
                                 check_move = 0;
                             }
                             if (tmp_session.game_settings.table[x][y] != 0) {
-                                printf("Impossible Move");
+                                printf("Impossible Move \n");
                                 check_move = 0;
                             }
                         }
@@ -341,6 +343,11 @@ int cmd_handler(int socket_fd, char **command)
                 exit(1);
             } else {
                 if (tmp_session.room_full == 1) {
+                    if (tmp_session.room_name[0] == '\0')
+                    {
+                      printf("The room you are trying to join is full \n");
+                      break;
+                    }
                     if (tmp_session.game_settings.winner) {
                         if (tmp_session.game_settings.winner == 1)
                             printf("You Lose!\n");
@@ -401,12 +408,12 @@ int cmd_handler(int socket_fd, char **command)
                             test = strtok(NULL, " ");
                             int y = atoi(test);
 
-                            if (x < 0 || x > 2 || y < 0 || x > 2) {
-                                printf("Impossible Move");
+                            if (x < 0 || y > 2 || y < 0 || x > 2) {
+                                printf("Impossible Move \n");
                                 check_move = 0;
                             }
                             if (tmp_session.game_settings.table[x][y] != 0) {
-                                printf("Impossible Move");
+                                printf("Impossible Move \n");
                                 check_move = 0;
                             }
                         }
