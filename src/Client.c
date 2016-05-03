@@ -273,6 +273,17 @@ int cmd_handler(int socket_fd, char **command)
       {
         if (tmp_session.room_full == 1)
         {
+          if (tmp_session.game_settings.winner != 0)
+          {
+            printf("Game Ended %d\n", tmp_session.game_settings.winner);
+            if(tmp_session.game_settings.winner == 1)
+              printf("You Win!\n");
+            else if(tmp_session.game_settings.winner == 2)
+              printf("You Lost!\n");
+            else if(tmp_session.game_settings.winner == 3)
+              printf("Draw!\n");
+            break;
+          }
           if(tmp_session.game_settings.turn == 0)
           {
             printf("Another player has joined your game \n");
@@ -340,17 +351,7 @@ int cmd_handler(int socket_fd, char **command)
           }
         }
         
-        if (tmp_session.game_settings.winner != 0)
-        {
-          printf("Game Ended %d\n", tmp_session.game_settings.winner);
-          if(tmp_session.game_settings.winner == 1)
-            printf("You Win!");
-          else if(tmp_session.game_settings.winner == 2)
-            printf("You Lost!");
-          else if(tmp_session.game_settings.winner == 3)
-            printf("Draw!");
-          break;
-        }
+        
       }
     }
   }
@@ -370,11 +371,22 @@ int cmd_handler(int socket_fd, char **command)
       if (nbytes = recv(socket_fd, &tmp_session, sizeof(tmp_session), 0) <= 0)
       {
         printf("Conn gg. \n");
+        exit(1);
       }
       else
       {
         if (tmp_session.room_full == 1)
         {
+          if (tmp_session.game_settings.winner )
+          {
+            if(tmp_session.game_settings.winner == 1)
+              printf("You Lose!\n");
+            else if(tmp_session.game_settings.winner == 2)
+              printf("You Win!\n");
+            else if(tmp_session.game_settings.winner == 3)
+              printf("Draw!\n");
+            break;
+          }
           if(tmp_session.game_settings.turn == 0)
             printf("You have joined a game \n");
           else if(tmp_session.game_settings.turn == 2)
@@ -440,16 +452,7 @@ int cmd_handler(int socket_fd, char **command)
           }
         }
         
-        if (tmp_session.game_settings.winner )
-        {
-          if(tmp_session.game_settings.winner == 1)
-            printf("You Lose!");
-          else if(tmp_session.game_settings.winner == 2)
-            printf("You Win!");
-          else if(tmp_session.game_settings.winner == 3)
-            printf("Draw!");
-          break;
-        }
+       
       }
     }
   }

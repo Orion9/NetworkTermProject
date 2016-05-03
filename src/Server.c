@@ -322,6 +322,20 @@ void cmd_handler(int socket_fd, char **command)
     
     printf("Game Session %s \n", session_list[i].room_name);
     
+    if(session_list[i].game_settings.turn == 0)
+      session_list[i].game_settings.turn = 1;
+    
+    if(session_list[i].game_settings.turn == 1)
+    {
+      printf("%s has made a move \n",session_list[i].game_settings.player_one_name);
+      session_list[i].game_settings.table[x][y] = 1;
+    }
+    else if(session_list[i].game_settings.turn == 2)
+    {
+      printf("%s has made a move \n",session_list[i].game_settings.player_two_name);
+      session_list[i].game_settings.table[x][y] = 2;
+    }
+    
     //Check Victory
     int a = 0;
     int b = 0;
@@ -395,13 +409,8 @@ void cmd_handler(int socket_fd, char **command)
       session_list[i].game_settings.winner = 3;
     }    
     
-    if(session_list[i].game_settings.turn == 0)
-      session_list[i].game_settings.turn = 1;
-    
     if(session_list[i].game_settings.turn == 1)
     {
-      printf("%s has made a move \n",session_list[i].game_settings.player_one_name);
-      session_list[i].game_settings.table[x][y] = 1;
       session_list[i].game_settings.turn = 2;
       send(session_list[i].game_settings.player_two_socket, &session_list[i], sizeof(session_list[i]), 0);
       if(session_list[i].game_settings.winner > 0){
@@ -411,8 +420,6 @@ void cmd_handler(int socket_fd, char **command)
     }
     else if(session_list[i].game_settings.turn == 2)
     {
-      printf("%s has made a move \n",session_list[i].game_settings.player_two_name);
-      session_list[i].game_settings.table[x][y] = 2;
       session_list[i].game_settings.turn = 1;
       send(session_list[i].game_settings.player_one_socket, &session_list[i], sizeof(session_list[i]), 0);
       if(session_list[i].game_settings.winner > 0){
@@ -423,6 +430,7 @@ void cmd_handler(int socket_fd, char **command)
     
     if(session_list[i].game_settings.winner > 0){
       Session tmp_session;
+      tmp_session.room_name[0] = '\0';
       session_list[i] = tmp_session;
       
     }
