@@ -45,35 +45,12 @@ typedef struct User {
     int is_logged_in;
 } User;
 
-/* User list */
-typedef struct UserList {
-    User user;
-    struct UserList *next;
-} UserList;
+
 
 User user_list[50];
+User returned_list[50];
+
 Session session_list[25];
-
-/* It will initialize game settings before game starts */
-extern void init_game(GameSettings **game_settings);
-
-/* It will play move */
-extern int play_game(int **game_table, char **player, int **move);
-
-/* Create new session */
-extern int create_session(char **player);
-
-/* Join session */
-extern int join_session(char **player);
-
-/* Prints main menu */
-extern void print_menu();
-
-/* Prints list of all game rooms */
-extern void list_games(Session **game_list);
-
-/* Prints current game */
-extern void print_game();
 
 /* Command Handler */
 extern void cmd_handler(int socket_fd, char **command);
@@ -89,6 +66,7 @@ int main(int argc, char **argv)
     for (a = 0; a < 50; a++)
     {
         user_list[a].is_logged_in = 0;
+        returned_list[a].is_logged_in = 0;
     }
 
     fd_set master; //master file descriptor list
@@ -175,32 +153,53 @@ int main(int argc, char **argv)
                     {
                       printf("New connection from %s on socket %d ...\n", client_address, newfd);
                     }
-                } else { //if it is not listener, there is data from client
-                    if ((nbytes = recv(i, &user_command, sizeof(user_command), 0)) <= 0) {     //from i. connection,socket
-                        user_list[i].is_logged_in = 0;
+                } else {
+                  /* Incoming data from socket i */
+                    if ((nbytes = recv(i, &user_command, sizeof(user_command), 0)) <= 0) {    
+                      /* Socket i exited log it out. */  
+                      user_list[i].is_logged_in = 0;
+                        
                         printf("Socket closed...\n");
-                        close(i);    //connection,socket closed
-                        FD_CLR(i, &master);   //it is removed from master set
+                        
+                        /* Socket i exited. */
+                        close(i);  
+                        
+                        /* Remove file descriptor */
+                        FD_CLR(i, &master);  
 
-                    } else { //if data is received from a client
-                      //printf("%s, %d \n", user_command, i);
-                      
+                    } else { 
+                      /* Connection succeeded. */
                       
                       if(user_list[i].is_logged_in == 0)
                       {
-                        if (user_list[i].user_name[0] != '\0')
+                        char tmp_name[STRING_SIZE], tmp_pass[STRING_SIZE];
+                        char *token = strtok(user_command, " ");
+                        strcpy(tmp_name, token);
+                        
+                        token = strtok(NULL, " ");
+                        strcpy(tmp_pass, token);
+                        
+                        int is_found = 0;
+                        int a = 0;
+                        for (a = 0; a < 50; a++)
                         {
-                          char tmp_name[STRING_SIZE], tmp_pass[STRING_SIZE];
-                          char *token = strtok(user_command, " ");
-                          strcpy(tmp_name, token);
-                          
-                          token = strtok(NULL, " ");
-                          strcpy(tmp_pass, token);
-                          
-                          if (strncmp(user_list[i].user_name, tmp_name, STRING_SIZE) == 0 
-                            && strncmp(user_list[i].user_pass, tmp_pass, STRING_SIZE) == 0 )
+                          if (strncmp(returned_list[a].user_name, tmp_name, STRING_SIZE) == 0)
                           {
-                            user_list[i].is_logged_in = 1;
+                            is_found = 1;
+                            break;
+                          }
+                          else
+                          {
+                            is_found = 0;
+                          }
+                        }
+                        
+                        if (is_found == 1)
+                        {
+                          if (strncmp(returned_list[a].user_name, tmp_name, STRING_SIZE) == 0 
+                            && strncmp(returned_list[a].user_pass, tmp_pass, STRING_SIZE) == 0 )
+                          {
+                            user_list[i] = returned_list[a];
                             
                             recv_time_t = time(NULL);
                             if (recv_time_t != -1){
@@ -218,20 +217,27 @@ int main(int argc, char **argv)
                         }
                         else
                         {
-                          char *token = strtok(user_command, " ");
-                          strcpy(user_list[i].user_name, token);
+                          for (a = 0; a < 50; a++)
+                          {
+                            if (returned_list[a].user_name[0] == '\0')
+                            {
+                              break;
+                            }
+                          }
                           
-                          token = strtok(NULL, " ");
-                          strcpy(user_list[i].user_pass, token);
+                          strcpy(returned_list[a].user_name, tmp_name);
+                          strcpy(returned_list[a].user_pass, tmp_pass);
+                          
+                          user_list[i] = returned_list[a];
                           
                           recv_time_t = time(NULL);
                           if (recv_time_t != -1){
                             auth_recv_time = *localtime(&recv_time_t);
                             strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
                           }
-                          user_list[i].is_logged_in = 1;
                           
                           printf("%s authenticated at %s \n", user_list[i].user_name, recv_time);
+                          user_list[i].is_logged_in = 1;
                         }
                         
                         sprintf(response, "%d", user_list[i].is_logged_in);
