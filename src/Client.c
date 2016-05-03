@@ -178,6 +178,10 @@ int main(int argc, char **argv)
             else
             {
               printf("response is %s \n", response);
+              if (atoi(response) == 0)
+              {
+                printf("Wrong pass or name! \n");
+              }
               is_user_login = atoi(response);
               if (is_user_login == 1)
               {
@@ -193,23 +197,25 @@ int main(int argc, char **argv)
             sleep(1);
           }
         }
-        print_menu();
-        fgets(command, STRING_SIZE, stdin);
-        
-        /* Remove trailing new line char */
-        if((position = strchr(command, '\n')) != NULL){
-          *position = '\0';
-        }
-        
-        if (strncmp(command, "quit", STRING_SIZE) == 0)
+        else
         {
-          break;
+          print_menu();
+          fgets(command, STRING_SIZE, stdin);
+          
+          /* Remove trailing new line char */
+          if((position = strchr(command, '\n')) != NULL){
+            *position = '\0';
+          }
+          
+          if (strncmp(command, "quit", STRING_SIZE) == 0)
+          {
+            break;
+          }
+          
+          send(socket_fd, &command, sizeof(command), 0);
+          success = cmd_handler(socket_fd, &command);
+          
         }
-        
-        send(socket_fd, &command, sizeof(command), 0);
-        success = cmd_handler(socket_fd, &command);
-        /* TODO Generate menu cases */
-        
     }
     printf("Good bye! \n");
     close(socket_fd);    //socket is closed

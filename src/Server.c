@@ -167,7 +167,7 @@ int main(int argc, char **argv)
 
                 } else { //if it is not listener, there is data from client
                     if ((nbytes = recv(i, &user_command, sizeof(user_command), 0)) <= 0) {     //from i. connection,socket
-
+                        user_list[i].is_logged_in = 0;
                         printf("Socket closed...\n");
                         close(i);    //connection,socket closed
                         FD_CLR(i, &master);   //it is removed from master set
@@ -175,25 +175,55 @@ int main(int argc, char **argv)
                     } else { //if data is received from a client
                       printf("%s, %d \n", user_command, i);
                       
-                      /* FIXME Disable already logged in option for closed sockets */
+                      
                       if(user_list[i].is_logged_in == 0)
                       {
-                        char *token = strtok(user_command, " ");
-                        strcpy(user_list[i].user_name, token);
-                        printf("user_list[i].user_name: %s \n", user_list[i].user_name);
-                        
-                        token = strtok(NULL, " ");
-                        strcpy(user_list[i].user_pass, token);
-                        printf("user_list[i].user_pass: %s \n", user_list[i].user_pass);
-                        
-                        recv_time_t = time(NULL);
-                        if (recv_time_t != -1){
-                          auth_recv_time = *localtime(&recv_time_t);
-                          strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
+                        if (user_list[i].user_name[0] != '\0')
+                        {
+                          char tmp_name[STRING_SIZE], tmp_pass[STRING_SIZE];
+                          char *token = strtok(user_command, " ");
+                          strcpy(tmp_name, token);
+                          
+                          token = strtok(NULL, " ");
+                          strcpy(tmp_pass, token);
+                          
+                          if (strncmp(user_list[i].user_name, tmp_name, STRING_SIZE) == 0 
+                            && strncmp(user_list[i].user_pass, tmp_pass, STRING_SIZE) == 0 )
+                          {
+                            user_list[i].is_logged_in = 1;
+                            
+                            recv_time_t = time(NULL);
+                            if (recv_time_t != -1){
+                              auth_recv_time = *localtime(&recv_time_t);
+                              strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
+                            }
+                            user_list[i].is_logged_in = 1;
+                            
+                            printf("%s authenticated at %s \n", user_list[i].user_name, recv_time);
+                          }
+                          else
+                          {
+                            user_list[i].is_logged_in = 0;
+                          }
                         }
-                        user_list[i].is_logged_in = 1;
+                        else
+                        {
+                          char *token = strtok(user_command, " ");
+                          strcpy(user_list[i].user_name, token);
+                          
+                          token = strtok(NULL, " ");
+                          strcpy(user_list[i].user_pass, token);
+                          
+                          recv_time_t = time(NULL);
+                          if (recv_time_t != -1){
+                            auth_recv_time = *localtime(&recv_time_t);
+                            strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
+                          }
+                          user_list[i].is_logged_in = 1;
+                          
+                          printf("%s authenticated at %s \n", user_list[i].user_name, recv_time);
+                        }
                         
-                        printf("%s authenticated at %s \n", user_list[i].user_name, recv_time);
                         sprintf(response, "%d", user_list[i].is_logged_in);
                         send(i, &response, sizeof(response), 0);
                       }
@@ -201,8 +231,6 @@ int main(int argc, char **argv)
                       {
                         cmd_handler(i, &user_command);
                       }
-                      /* TODO Implement game logic */
-                      /* TODO Implement session system */
                     }
                 }
             }
