@@ -90,7 +90,7 @@ int main(int argc, char **argv)
     FD_ZERO(&master);    //master and temp is cleared
     FD_ZERO(&read_fds);
 
-    if ((listener = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {   //socket is defined TCP, and return socket descriptor for listening
+    if ((listener = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {   //socket is defined TCP, and return socket descriptor for listening
         // for UDP, use DATAGRAM instead of STREAM
         printf("Socket cannot be created!!!\n");
         exit(1);    //EXIT FAILURE
@@ -115,145 +115,158 @@ int main(int argc, char **argv)
     }
     printf("Binding is done...\n");
 
-    if (listen(listener, 45) == -1) {    //listening, 45 connection is let in buffer
-        printf("Error in listener \n");
-        exit(1);    //EXIT FAILURE
-    }
-    printf("Server is listening...\n");
-
+//     if (listen(listener, 45) == -1) {    //listening, 45 connection is let in buffer
+//         printf("Error in listener \n");
+//         exit(1);    //EXIT FAILURE
+//     }
+//     printf("Server is listening...\n");
+     
     FD_SET(listener, &master);   //add listener to master set
     fdmax = listener; //biggest is listener now
+    
     char user_command[STRING_SIZE];
     struct tm auth_recv_time;
     time_t recv_time_t;
     char recv_time[STRING_SIZE];
     char response[STRING_SIZE];
-    for (;;) {
-        read_fds = master; //copy of master
-        if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) { //track ready sockets to read,write, supports multiplexing, read_fds is updated
-            exit(1);    //EXIT FAILURE
-        }
-        for (i = 0; i <= fdmax; i++) { //all list is controlledcommand
-            if (FD_ISSET(i, &read_fds)) {     //if it is in temp list
-                if (i == listener) { //if it is listener, there is new connection
-                    addrlen = sizeof(clientaddr);
-                    
-                    if(fdmax - 3 > 0)
-                      printf("Server multiplex sockets...\n");
-                    else
-                      printf("There is only one connection...\n");
-                    
-                    newfd = accept(listener, (struct sockaddr *) &clientaddr, &addrlen);   //accept connect request of client and return new socket for this connection
-                    printf("Server accepts connection request of Client...\n");
-                    FD_SET(newfd, &master);   // add new socket to master set
-                    if (newfd > fdmax)
-                        fdmax = newfd; //it is biggest socket number 
-                    char client_address[INET_ADDRSTRLEN];
-                    if (inet_ntop(AF_INET, &clientaddr.sin_addr.s_addr, client_address, sizeof(client_address)) != NULL)
-                    {
-                      printf("New connection from %s on socket %d ...\n", client_address, newfd);
-                    }
-                } else {
-                  /* Incoming data from socket i */
-                    if ((nbytes = recv(i, &user_command, sizeof(user_command), 0)) <= 0) {    
-                      /* Socket i exited log it out. */  
-                      user_list[i].is_logged_in = 0;
-                        
-                        printf("Socket closed...\n");
-                        
-                        /* Socket i exited. */
-                        close(i);  
-                        
-                        /* Remove file descriptor */
-                        FD_CLR(i, &master);  
-
-                    } else { 
-                      /* Connection succeeded. */
-                      
-                      if(user_list[i].is_logged_in == 0)
-                      {
-                        char tmp_name[STRING_SIZE], tmp_pass[STRING_SIZE];
-                        char *token = strtok(user_command, " ");
-                        strcpy(tmp_name, token);
-                        
-                        token = strtok(NULL, " ");
-                        strcpy(tmp_pass, token);
-                        
-                        int is_found = 0;
-                        int a = 0;
-                        for (a = 0; a < 50; a++)
-                        {
-                          if (strncmp(returned_list[a].user_name, tmp_name, STRING_SIZE) == 0)
-                          {
-                            is_found = 1;
-                            break;
-                          }
-                          else
-                          {
-                            is_found = 0;
-                          }
-                        }
-                        
-                        if (is_found == 1)
-                        {
-                          printf("Player is returning... \n");
-                          if (strncmp(returned_list[a].user_name, tmp_name, STRING_SIZE) == 0 
-                            && strncmp(returned_list[a].user_pass, tmp_pass, STRING_SIZE) == 0 )
-                          {
+    char client_address[INET_ADDRSTRLEN];
+    
+    for (;;) 
+    {
+      read_fds = master; //copy of master
+      if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) { //track ready sockets to read,write, supports multiplexing, read_fds is updated
+             exit(1);    //EXIT FAILURE
+         }
+         for (i = 0; i <= fdmax; i++) { //all list is controlledcommand
+             if (FD_ISSET(i, &read_fds)) {     //if it is in temp list
+                 if (i == listener) { //if it is listener, there is new connection
+                     addrlen = sizeof(clientaddr);
+                     
+                     if(fdmax - 3 > 0)
+                       printf("Server multiplex sockets...\n");
+                     else
+                       printf("There is only one connection...\n");
+                     
+                     //newfd = accept(listener, (struct sockaddr *) &clientaddr, &addrlen);   //accept connect request of client and return new socket for this connection
+                     //printf("Server accepts connection request of Client...\n");
+                     
+                     if (recvfrom(listener, &user_command, sizeof(user_command), 0, (struct sockaddr *)&clientaddr, &addrlen) > 0)
+                     {
+                      newfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+                      bind(newfd, (struct sockaddr *)&clientaddr, &addrlen);
+                     }
+                     
+                     FD_SET(newfd, &master);   // add new socket to master set
+                     if (newfd > fdmax)
+                         fdmax = newfd; //it is biggest socket number 
+                     
+                     if (inet_ntop(AF_INET, &clientaddr.sin_addr.s_addr, client_address, sizeof(client_address)) != NULL)
+                     {
+                       printf("New connection from %s on socket %d ...\n", client_address, newfd);
+                     }
+                 } else {
+                   addrlen = sizeof(clientaddr);
+                   
+                   /* Incoming data from socket i */
+                   if ((nbytes = recvfrom(i, &user_command, sizeof(user_command), 0, (struct sockaddr *)&clientaddr, &addrlen)) < 0) {    
+                       /* Socket i exited log it out. */  
+                       user_list[i].is_logged_in = 0;
+                         
+                         printf("Socket closed...\n");
+                         
+                         /* Socket i exited. */
+                         close(i);  
+                         
+                         /* Remove file descriptor */
+                         FD_CLR(i, &master);  
+ 
+                     } else { 
+                       /* Connection succeeded. */
+                       
+                       if(user_list[i].is_logged_in == 0)
+                       {
+                         char tmp_name[STRING_SIZE], tmp_pass[STRING_SIZE];
+                         char *token = strtok(user_command, " ");
+                         strcpy(tmp_name, token);
+                         
+                         token = strtok(NULL, " ");
+                         strcpy(tmp_pass, token);
+                         
+                         int is_found = 0;
+                         int a = 0;
+                         for (a = 0; a < 50; a++)
+                         {
+                           if (strncmp(returned_list[a].user_name, tmp_name, STRING_SIZE) == 0)
+                           {
+                             is_found = 1;
+                             break;
+                           }
+                           else
+                           {
+                             is_found = 0;
+                           }
+                         }
+                         
+                         if (is_found == 1)
+                         {
+                           printf("Player is returning... \n");
+                           if (strncmp(returned_list[a].user_name, tmp_name, STRING_SIZE) == 0 
+                             && strncmp(returned_list[a].user_pass, tmp_pass, STRING_SIZE) == 0 )
+                           {
                             user_list[i] = returned_list[a];
-                            
+                             
                             recv_time_t = time(NULL);
-                            if (recv_time_t != -1){
-                              auth_recv_time = *localtime(&recv_time_t);
-                              strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
-                            }
-                            user_list[i].is_logged_in = 1;
-                            
-                            printf("%s authenticated at %s \n", user_list[i].user_name, recv_time);
-                          }
-                          else
-                          {
-                            user_list[i].is_logged_in = 0;
-                          }
+                             if (recv_time_t != -1){
+                               auth_recv_time = *localtime(&recv_time_t);
+                               strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
+                             }
+                             user_list[i].is_logged_in = 1;
+                             
+                             printf("%s authenticated at %s \n", user_list[i].user_name, recv_time);
+                           }
+                           else
+                           {
+                             user_list[i].is_logged_in = 0;
+                           }
                         }
-                        else
-                        {
-                          printf("A new player! \n");
-                          for (a = 0; a < 50; a++)
-                          {
-                            if (returned_list[a].user_name[0] == '\0')
-                            {
-                              break;
-                            }
-                          }
-                          
-                          strcpy(returned_list[a].user_name, tmp_name);
-                          strcpy(returned_list[a].user_pass, tmp_pass);
-                          
-                          user_list[i] = returned_list[a];
-                          
+                         else
+                         {
+                           printf("A new player! \n");
+                           for (a = 0; a < 50; a++)
+                           {
+                             if (returned_list[a].user_name[0] == '\0')
+                             {
+                               break;
+                             }
+                           }
+                           
+                           strcpy(returned_list[a].user_name, tmp_name);
+                           strcpy(returned_list[a].user_pass, tmp_pass);
+                           
+                           user_list[i] = returned_list[a];
+                           
                           recv_time_t = time(NULL);
-                          if (recv_time_t != -1){
-                            auth_recv_time = *localtime(&recv_time_t);
-                            strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
-                          }
-                          
-                          printf("%s authenticated at %s \n", user_list[i].user_name, recv_time);
-                          user_list[i].is_logged_in = 1;
-                        }
-                        
-                        sprintf(response, "%d", user_list[i].is_logged_in);
-                        send(i, &response, sizeof(response), 0);
-                      }
-                      else 
-                      {
-                        cmd_handler(i, &user_command);
-                      }
-                    }
-                }
-            }
-        }
-    }
+                           if (recv_time_t != -1){
+                             auth_recv_time = *localtime(&recv_time_t);
+                             strftime(recv_time, STRING_SIZE, "%H:%M:%S", &auth_recv_time);
+                           }
+                           
+                           printf("%s authenticated at %s \n", user_list[i].user_name, recv_time);
+                           user_list[i].is_logged_in = 1;
+                         }
+                         
+                         sprintf(response, "%d", user_list[i].is_logged_in);
+                         send(i, &response, sizeof(response), 0);
+                       }
+                       else 
+                       {
+                         cmd_handler(i, &user_command);
+                       }
+                     }
+                 }
+             }
+         }
+     }
     return 0;
 }
 

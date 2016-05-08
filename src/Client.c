@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     fd_set read_fds;
 
     /* Socket creation */
-    socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (socket_fd  == -1) {
         printf("Error (1): Socket creation failed!\n");
         exit(1);
