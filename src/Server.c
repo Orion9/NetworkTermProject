@@ -90,7 +90,7 @@ int main(int argc, char **argv)
     FD_ZERO(&master);    //master and temp is cleared
     FD_ZERO(&read_fds);
 
-    if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {   //socket is defined TCP, and return socket descriptor for listening
+    if ((listener = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {   //socket is defined TCP, and return socket descriptor for listening
         // for UDP, use DATAGRAM instead of STREAM
         printf("Socket cannot be created!!!\n");
         exit(1);    //EXIT FAILURE
@@ -155,6 +155,7 @@ int main(int argc, char **argv)
                     }
                 } else {
                   /* Incoming data from socket i */
+		   /*nbytes = recvfrom(listener, buf, 1024, 0, (struct sockaddr *)&clientaddr, &addrlen);*/
                     if ((nbytes = recv(i, &user_command, sizeof(user_command), 0)) <= 0) {    
                       /* Socket i exited log it out. */  
                       user_list[i].is_logged_in = 0;
