@@ -74,7 +74,7 @@ Session session_list[25];
 extern void print_menu();
 
 /* Command Handler */
-int cmd_handler(int socket_fd, char **command);
+int cmd_handler(int socket_fd, char **command, sockaddr_in server_addr);
 
 User user_info;
 
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     fd_set read_fds;
 
     /* Socket creation */
-    socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd  == -1) {
         printf("Error (1): Socket creation failed!\n");
         exit(1);
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 
     memset(server_addr.sin_zero, '\0', sizeof server_addr.sin_zero);  //sin_zero is fulled by 0
 
-    /* Connection Request */
+    /* Connection Request 
     printf("Clients sends connection request to server...\n");
     int conn_result = connect(socket_fd, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
     if (conn_result == -1) {
@@ -121,6 +121,7 @@ int main(int argc, char **argv)
     } else {
         printf("Connection established...\n");
     }
+    */
 
     /* File Descriptor Settings */
     FD_ZERO(&master);
@@ -153,7 +154,8 @@ int main(int argc, char **argv)
             }
 
             if (command[0] != '\0') {
-                send(socket_fd, &command, sizeof(command), 0);
+                /*send(socket_fd, &command, sizeof(command), 0);*/
+		sendto(socket_fd, &command, sizeof(command), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
                 int nbytes;
                 if ((nbytes = recv(socket_fd, &response, sizeof(response), 0)) <= 0) {
                     printf("No connection with server \n");
@@ -188,8 +190,14 @@ int main(int argc, char **argv)
                 break;
             }
 
-            send(socket_fd, &command, sizeof(command), 0);
-            success = cmd_handler(socket_fd, &command);
+            /*send(socket_fd, &command, sizeof(command), 0);*/
+	    if(sendto(socket_fd, &command, sizeof(command), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr))<0){
+	      printf("Error (2): Sending has been failed!\n");
+	      exit(2);
+	    }else {
+	      printf("Sending established...\n");
+	    }
+            success = cmd_handler(socket_fd, &command, server_addr);
 
         }
     }
@@ -211,7 +219,7 @@ void print_menu()
     printf("[new, list, join, quit]: ");
 }
 
-int cmd_handler(int socket_fd, char **command)
+int cmd_handler(int socket_fd, char **command, sockaddr_in server_addr)
 {
     char tmp_command[STRING_SIZE];
     strcpy(tmp_command, command);
@@ -319,7 +327,8 @@ int cmd_handler(int socket_fd, char **command)
                             }
                         }
 
-                        send(socket_fd, &move_command, sizeof(move_command), 0);
+                        /*send(socket_fd, &move_command, sizeof(move_command), 0);*/
+			sendto(socket_fd, &move_command, sizeof(move_command), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
 
                     }
                 }
@@ -418,7 +427,8 @@ int cmd_handler(int socket_fd, char **command)
                             }
                         }
 
-                        send(socket_fd, &move_command, sizeof(move_command), 0);
+                        /*send(socket_fd, &move_command, sizeof(move_command), 0);*/
+			sendto(socket_fd, &move_command, sizeof(move_command), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
                     }
                 }
 
