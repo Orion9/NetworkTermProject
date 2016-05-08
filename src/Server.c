@@ -116,7 +116,7 @@ int main(int argc, char **argv)
     printf("Binding is done...\n");
 
     if (listen(listener, 45) == -1) {    //listening, 45 connection is let in buffer
-        printf("Error in listener");
+        printf("Error in listener \n");
         exit(1);    //EXIT FAILURE
     }
     printf("Server is listening...\n");
@@ -155,7 +155,6 @@ int main(int argc, char **argv)
                     }
                 } else {
                   /* Incoming data from socket i */
-		   /*nbytes = recvfrom(listener, buf, 1024, 0, (struct sockaddr *)&clientaddr, &addrlen);*/
                     if ((nbytes = recv(i, &user_command, sizeof(user_command), 0)) <= 0) {    
                       /* Socket i exited log it out. */  
                       user_list[i].is_logged_in = 0;
