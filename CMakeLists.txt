@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 project(NetworkTermProject)
 
 add_executable(client src/Client.c)
-add_executable(server src/Server.c)
+add_executable(server src/ServerUDP.c)
 
 set(CMAKE_CXX_FLAGS "-g")
 

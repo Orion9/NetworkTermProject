@@ -130,6 +130,8 @@ int main(int argc, char **argv)
     char recv_time[STRING_SIZE];
     char response[STRING_SIZE];
     char client_address[INET_ADDRSTRLEN];
+    waitThreshold.tv_sec = 5000;
+    waitThreshold.tv_usec = 50; 
     
     for (;;) 
     {
@@ -152,6 +154,7 @@ int main(int argc, char **argv)
                      
                      if (recvfrom(listener, &user_command, sizeof(user_command), 0, (struct sockaddr *)&clientaddr, &addrlen) > 0)
                      {
+                       printf("DATA: %s \n", user_command);
                       newfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
                       bind(newfd, (struct sockaddr *)&clientaddr, &addrlen);
                      }
@@ -182,7 +185,6 @@ int main(int argc, char **argv)
  
                      } else { 
                        /* Connection succeeded. */
-                       
                        if(user_list[i].is_logged_in == 0)
                        {
                          char tmp_name[STRING_SIZE], tmp_pass[STRING_SIZE];
