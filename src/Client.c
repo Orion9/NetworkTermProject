@@ -36,10 +36,10 @@ typedef struct GameSettings {
   char player_two_name[STRING_SIZE];
   int player_one_socket;
   int player_two_socket;
-  char player_one_ip[INET_ADDRSTRLEN];
-  char player_two_ip[INET_ADDRSTRLEN];
-  int player_one_port;
-  int player_two_port;
+  
+  struct sockaddr_in player_one_addr;
+  struct sockaddr_in player_two_addr;
+  
   int turn;
   int winner;
 } GameSettings;
@@ -58,12 +58,13 @@ typedef struct User {
   char user_name[STRING_SIZE];
   char user_pass[STRING_SIZE];
   char user_ip[INET_ADDRSTRLEN];
-  int user_porn;
+  int user_port;
   int is_playing;
   int user_room_key;
   int is_logged_in;
   struct sockaddr_in user_addr;
 } User;
+
 
 
 /* 
