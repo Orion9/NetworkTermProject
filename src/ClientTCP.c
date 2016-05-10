@@ -27,45 +27,42 @@
 
 /* Game Settings */
 typedef enum GameSigns {
-  EMPTY, X, O
+    EMPTY, X, O
 } GameSigns;
 
 typedef struct GameSettings {
-  int table[FIELD_SIZE][FIELD_SIZE];
-  char player_one_name[STRING_SIZE];
-  char player_two_name[STRING_SIZE];
-  int player_one_socket;
-  int player_two_socket;
-  
-  struct sockaddr_in player_one_addr;
-  struct sockaddr_in player_two_addr;
-  
-  int turn;
-  int winner;
+    int table[FIELD_SIZE][FIELD_SIZE];
+    char player_one_name[STRING_SIZE];
+    char player_two_name[STRING_SIZE];
+    int player_one_socket;
+    int player_two_socket;
+    int turn;
+    int winner;
 } GameSettings;
 
 /* Game room information */
 typedef struct Session {
-  int room_key;
-  char room_name[STRING_SIZE];
-  int room_full;
-  int game_ended;
-  GameSettings game_settings;
+    int room_key;
+    char room_name[STRING_SIZE];
+    int room_full;
+    int game_ended;
+    GameSettings game_settings;
 } Session;
 
 /* User */
 typedef struct User {
-  char user_name[STRING_SIZE];
-  char user_pass[STRING_SIZE];
-  char user_ip[INET_ADDRSTRLEN];
-  int user_port;
-  int is_playing;
-  int user_room_key;
-  int is_logged_in;
-  struct sockaddr_in user_addr;
+    char user_name[STRING_SIZE];
+    char user_pass[STRING_SIZE];
+    int is_playing;
+    int user_room_key;
+    int is_logged_in;
 } User;
 
-
+/* User list */
+typedef struct UserList {
+    User user;
+    struct UserList *next;
+} UserList;
 
 /* 
  * Session list, total of 25 sessions are supported
@@ -96,7 +93,7 @@ int main(int argc, char **argv)
     fd_set read_fds;
 
     /* Socket creation */
-    socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd  == -1) {
         printf("Error (1): Socket creation failed!\n");
         exit(1);
@@ -145,9 +142,7 @@ int main(int argc, char **argv)
     int success = 0;
     while (1) {
         read_fds = master;
-//         command[0] = 'a';
-//         command[1] = '\0';
-//         send(socket_fd, &command, sizeof(command), 0);
+
         if (is_user_login != 1) {
             printf("Username and Password: ");
             fgets(command, 250, stdin);
@@ -160,12 +155,10 @@ int main(int argc, char **argv)
             if (command[0] != '\0') {
                 send(socket_fd, &command, sizeof(command), 0);
                 int nbytes;
-                nbytes = recv(socket_fd, &response, sizeof(response), 0);
-                if (nbytes < 0) {
+                if ((nbytes = recv(socket_fd, &response, sizeof(response), 0)) <= 0) {
                     printf("No connection with server \n");
                     exit(1);
                 } else {
-                    printf("%s \n", response);
                     if (atoi(response) == 0) {
                         printf("Wrong pass or name! \n");
                     }
@@ -242,12 +235,20 @@ int cmd_handler(int socket_fd, char **command)
         strcpy(tmp_command, command);
         char *room_name = strtok(tmp_command, " ");
         room_name = strtok(NULL, " ");
-
-        printf("Created room: %s \n", room_name);
-
+        
         int nbytes;
         char *join_message;
         Session tmp_session;
+        
+        int check;
+        printf("Waiting to recieve rtt check\n");
+        nbytes = recv(socket_fd, &check, sizeof(check), 0);
+        printf("Sending rtt check back %d \n", check);
+        check = 666;
+        send(socket_fd, &check, sizeof(check), 0);
+
+        printf("Created room: %s \n", room_name);
+
         while (1) {
             if (nbytes = recv(socket_fd, &tmp_session, sizeof(tmp_session), 0) <= 0) {
                 printf("RIP Conn. \n");
@@ -327,6 +328,12 @@ int cmd_handler(int socket_fd, char **command)
                         }
 
                         send(socket_fd, &move_command, sizeof(move_command), 0);
+                        
+                        printf("Waiting to recieve rtt check\n");
+                        nbytes = recv(socket_fd, &check, sizeof(check), 0);
+                        printf("Sending rtt check back %d \n", check);
+                        check = 666;
+                        send(socket_fd, &check, sizeof(check), 0);
 
                     }
                 }
@@ -338,11 +345,19 @@ int cmd_handler(int socket_fd, char **command)
         strcpy(tmp_command, command);
         char *room_name = strtok(tmp_command, " ");
         room_name = strtok(NULL, " ");
-
-        printf("Joined room: %s \n", room_name);
+        
         int nbytes, is_game_finished = 0;
         Session tmp_session;
         char move_command[STRING_SIZE];
+        
+        int check;
+        printf("Waiting to recieve rtt check\n");
+        nbytes = recv(socket_fd, &check, sizeof(check), 0);
+        printf("Sending rtt check back %d \n", check);
+        check = 666;
+        send(socket_fd, &check, sizeof(check), 0);
+
+        printf("Joined room: %s \n", room_name);
 
         while (1) {
             if (nbytes = recv(socket_fd, &tmp_session, sizeof(tmp_session), 0) <= 0) {
@@ -426,6 +441,12 @@ int cmd_handler(int socket_fd, char **command)
                         }
 
                         send(socket_fd, &move_command, sizeof(move_command), 0);
+                        
+                        printf("Waiting to recieve rtt check\n");
+                        nbytes = recv(socket_fd, &check, sizeof(check), 0);
+                        printf("Sending rtt check back %d \n", check);
+                        check = 666;
+                        send(socket_fd, &check, sizeof(check), 0);
                     }
                 }
 

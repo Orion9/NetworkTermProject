@@ -59,6 +59,14 @@ User returned_list[50];
 socklen_t addrlen;
 Session session_list[25];
 
+int average_rtt_command_new = 0;
+int average_rtt_command_join = 0;
+int average_rtt_command_move = 0;
+
+int total_rtt_command_new = 0;
+int total_rtt_command_join = 0;
+int total_rtt_command_move = 0;
+
 /* Command Handler */
 extern void cmd_handler(int socket_fd, int t, char **command, struct sockaddr_in *clientaddr);
 
@@ -75,6 +83,14 @@ int main(int argc, char **argv)
         inet_pton(AF_INET, "0.0.0.0", &(user_list[a].user_addr.sin_addr));
         returned_list[a].is_logged_in = 0;
     }
+    
+    average_rtt_command_new = 0;
+    average_rtt_command_join = 0;
+    average_rtt_command_move = 0;
+    
+    total_rtt_command_new = 0;
+    total_rtt_command_join = 0;
+    total_rtt_command_move = 0;
 
     fd_set master; //master file descriptor list
     fd_set read_fds; //copy of master file descriptor list which is temp
@@ -161,12 +177,10 @@ int main(int argc, char **argv)
             client_port = ntohs(clientaddr.sin_port);
 
             if (strncmp(client_address, target_address, INET_ADDRSTRLEN) == 0 && target_port == client_port) {
-                printf("I exist so I am \n");
                 user_new_connection = 0;
                 break;
             } else if (user_list[t].user_name[0] == '\0') {
                 user_new_connection = 1;
-                printf("Yo mama, im on TV \n");
                 break;
             } else if (t == 49) {
                 printf("User limit reached! \n");
@@ -293,7 +307,6 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
     addrlen = sizeof(struct sockaddr);
 
     char *parsed_command = strtok(tmp_command, " ");
-
     if (strncmp(parsed_command, "list", STRING_SIZE) == 0) {
         int i = 0;
         for (i = 0; i < 25; i++) {
@@ -301,7 +314,9 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
                 printf("%s \n", session_list[i].room_name);
             }
         }
-
+        
+        
+        
         if (sendto(socket_fd, &session_list, sizeof(session_list), 0, (struct sockaddr *)clientaddr, addrlen) < 0)
         {
           perror("list");
@@ -331,7 +346,7 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
         session_list[i].game_settings.player_one_addr.sin_family = (*clientaddr).sin_family;
         session_list[i].game_settings.player_one_addr.sin_addr = (*clientaddr).sin_addr;
         session_list[i].game_settings.player_one_addr.sin_port = (*clientaddr).sin_port;
-
+        
         struct tm auth_recv_time;
         time_t recv_time_t;
         char recv_time[STRING_SIZE];
@@ -342,6 +357,21 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
         }
 
         printf("%s created the Game Session %d at %s \n", user_list[t].user_name, session_list[i].room_key, recv_time);
+        
+        struct timeval stop, start;
+        gettimeofday(&start, NULL);
+        int check = 1;
+        sendto(socket_fd, &check, sizeof(check), 0, (struct sockaddr *)clientaddr, addrlen);
+
+        int nbytes;
+        nbytes = recv(socket_fd, &check, sizeof(check), 0);
+        gettimeofday(&stop, NULL);
+        
+        average_rtt_command_new = average_rtt_command_new * total_rtt_command_new + (stop.tv_usec - start.tv_usec);
+        total_rtt_command_new = total_rtt_command_new + 1;
+        average_rtt_command_new = average_rtt_command_new / total_rtt_command_new;
+
+        printf("Measured rtt for new command %lu and calculated average %d \n", stop.tv_usec - start.tv_usec, average_rtt_command_new);
 
         //sendto(socket_fd, &session_list[i], sizeof(session_list[i]), 0, (struct sockaddr *)&clientaddr, addrlen);
     } else if (strncmp(parsed_command, "join", STRING_SIZE) == 0) {
@@ -359,6 +389,22 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
                     Session tmp_session;
                     tmp_session = session_list[i];
                     tmp_session.room_name[0] = '\0';
+                    
+                    struct timeval stop, start;
+                    gettimeofday(&start, NULL);
+                    int check = 1;
+                    sendto(socket_fd, &check, sizeof(check), 0, (struct sockaddr *)clientaddr, addrlen);
+                    
+                    int nbytes;
+                    nbytes = recv(socket_fd, &check, sizeof(check), 0);
+                    gettimeofday(&stop, NULL);
+                    
+                    average_rtt_command_join = average_rtt_command_join * total_rtt_command_join + (stop.tv_usec - start.tv_usec);
+                    total_rtt_command_join = total_rtt_command_join + 1;
+                    average_rtt_command_join = average_rtt_command_join / total_rtt_command_join;
+                    
+                    printf("Measured rtt for join command %lu and calculated average %d \n", stop.tv_usec - start.tv_usec, average_rtt_command_join);
+                    
                     if (sendto(socket_fd, &tmp_session, sizeof(tmp_session), 0, (struct sockaddr *)clientaddr, addrlen) < 0)
                     {
                       perror("join 0");
@@ -385,6 +431,22 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
 
                     printf("%s joined the Game Session %d at %s \n", user_list[t].user_name, session_list[i].room_key, recv_time);
                     
+                    struct timeval stop, start;
+                    gettimeofday(&start, NULL);
+                    int check = 1;
+                    sendto(socket_fd, &check, sizeof(check), 0, (struct sockaddr *)clientaddr, addrlen);
+                    
+                    int nbytes;
+                    nbytes = recv(socket_fd, &check, sizeof(check), 0);
+                    gettimeofday(&stop, NULL);
+                    
+                    average_rtt_command_join = average_rtt_command_join * total_rtt_command_join + (stop.tv_usec - start.tv_usec);
+                    total_rtt_command_join = total_rtt_command_join + 1;
+                    average_rtt_command_join = average_rtt_command_join / total_rtt_command_join;
+                    
+                    printf("Measured rtt for join command %lu and calculated average %d \n", stop.tv_usec - start.tv_usec, average_rtt_command_join);
+                    
+                    
                     if (sendto(socket_fd, &session_list[i], sizeof(session_list[i]), 0, (struct sockaddr *)&(session_list[i].game_settings.player_one_addr), addrlen) < 0)
                     {
                       perror("join 1");
@@ -393,6 +455,10 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
                     {
                       perror("join 2");
                     }
+                    
+                    printf("Notified both players. Game starting\n");
+                    
+                    
                 }
             }
         }
@@ -499,6 +565,26 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
             session_list[i].game_settings.winner = 3;
         }
 
+        struct timeval stop, start;
+        gettimeofday(&start, NULL);
+        int check = 1;
+        if (session_list[i].game_settings.turn == 1) {
+          sendto(socket_fd, &check, sizeof(check), 0, (struct sockaddr *)&(session_list[i].game_settings.player_one_addr), addrlen);
+        }
+        else if (session_list[i].game_settings.turn == 2) {
+          sendto(socket_fd, &check, sizeof(check), 0, (struct sockaddr *)&(session_list[i].game_settings.player_two_addr), addrlen);
+        }
+        
+        int nbytes;
+        nbytes = recv(socket_fd, &check, sizeof(check), 0);
+        gettimeofday(&stop, NULL);
+        
+        average_rtt_command_move = average_rtt_command_move * total_rtt_command_move + (stop.tv_usec - start.tv_usec);
+        total_rtt_command_move = total_rtt_command_move + 1;
+        average_rtt_command_move = average_rtt_command_move / total_rtt_command_move;
+        
+        printf("Measured rtt for move command %lu and calculated average %d \n", stop.tv_usec - start.tv_usec, average_rtt_command_move);
+        
         if (session_list[i].game_settings.turn == 1) {
             session_list[i].game_settings.turn = 2;
             sendto(socket_fd, &session_list[i], sizeof(session_list[i]), 0, (struct sockaddr *)&(session_list[i].game_settings.player_two_addr), addrlen);
