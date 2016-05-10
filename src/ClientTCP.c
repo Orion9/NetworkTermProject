@@ -241,9 +241,9 @@ int cmd_handler(int socket_fd, char **command)
         Session tmp_session;
         
         int check;
-        printf("Waiting to recieve rtt check\n");
+        //printf("Waiting to recieve rtt check\n");
         nbytes = recv(socket_fd, &check, sizeof(check), 0);
-        printf("Sending rtt check back %d \n", check);
+        //printf("Sending rtt check back %d \n", check);
         check = 666;
         send(socket_fd, &check, sizeof(check), 0);
 
@@ -329,9 +329,9 @@ int cmd_handler(int socket_fd, char **command)
 
                         send(socket_fd, &move_command, sizeof(move_command), 0);
                         
-                        printf("Waiting to recieve rtt check\n");
+                        //printf("Waiting to recieve rtt check\n");
                         nbytes = recv(socket_fd, &check, sizeof(check), 0);
-                        printf("Sending rtt check back %d \n", check);
+                        //printf("Sending rtt check back %d \n", check);
                         check = 666;
                         send(socket_fd, &check, sizeof(check), 0);
 
@@ -351,9 +351,9 @@ int cmd_handler(int socket_fd, char **command)
         char move_command[STRING_SIZE];
         
         int check;
-        printf("Waiting to recieve rtt check\n");
+        //printf("Waiting to recieve rtt check\n");
         nbytes = recv(socket_fd, &check, sizeof(check), 0);
-        printf("Sending rtt check back %d \n", check);
+        //printf("Sending rtt check back %d \n", check);
         check = 666;
         send(socket_fd, &check, sizeof(check), 0);
 
@@ -442,9 +442,9 @@ int cmd_handler(int socket_fd, char **command)
 
                         send(socket_fd, &move_command, sizeof(move_command), 0);
                         
-                        printf("Waiting to recieve rtt check\n");
+                        //printf("Waiting to recieve rtt check\n");
                         nbytes = recv(socket_fd, &check, sizeof(check), 0);
-                        printf("Sending rtt check back %d \n", check);
+                        //printf("Sending rtt check back %d \n", check);
                         check = 666;
                         send(socket_fd, &check, sizeof(check), 0);
                     }

@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 
             printf("%d: %s:%d \n", t, user_list[t].user_ip, user_list[t].user_port);
 
-            printf("t: %d \n", t);
+            //printf("t: %d \n", t);
 
             /* Connection succeeded. */
             if (user_list[t].is_logged_in == 0) {
@@ -276,8 +276,6 @@ int main(int argc, char **argv)
                 inet_ntop(AF_INET, &(user_list[t].user_addr.sin_addr), target_address, INET_ADDRSTRLEN);
                 target_port = ntohs(user_list[t].user_addr.sin_port);
 
-                printf("GG: %d: %s:%d \n", t, target_address, target_port);
-
                 if (sendto(listener, &response, sizeof(response), 0, (struct sockaddr *)&(user_list[t].user_addr), addr_len) == -1) {
                     perror("main");
                 }
@@ -314,8 +312,6 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
                 printf("%s \n", session_list[i].room_name);
             }
         }
-        
-        
         
         if (sendto(socket_fd, &session_list, sizeof(session_list), 0, (struct sockaddr *)clientaddr, addrlen) < 0)
         {
@@ -372,6 +368,8 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
         average_rtt_command_new = average_rtt_command_new / total_rtt_command_new;
 
         printf("Measured rtt for new command %lu and calculated average %d \n", stop.tv_usec - start.tv_usec, average_rtt_command_new);
+        long unsigned int throughput_command = 100 * 4 * (long unsigned int)sizeof(command) / (stop.tv_usec - start.tv_usec);
+        printf("Throughput for command: %lu \n", throughput_command);
 
         //sendto(socket_fd, &session_list[i], sizeof(session_list[i]), 0, (struct sockaddr *)&clientaddr, addrlen);
     } else if (strncmp(parsed_command, "join", STRING_SIZE) == 0) {
@@ -404,6 +402,9 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
                     average_rtt_command_join = average_rtt_command_join / total_rtt_command_join;
                     
                     printf("Measured rtt for join command %lu and calculated average %d \n", stop.tv_usec - start.tv_usec, average_rtt_command_join);
+                    long unsigned int throughput_command = 100 * 4 * (long unsigned int)sizeof(command) / (stop.tv_usec - start.tv_usec);
+                    long unsigned int throughput_response = 100 * 4 * (long unsigned int)sizeof(session_list[i]) / (stop.tv_usec - start.tv_usec);
+                    printf("Throughput for command: %lu , response: %lu\n", throughput_command, throughput_response);
                     
                     if (sendto(socket_fd, &tmp_session, sizeof(tmp_session), 0, (struct sockaddr *)clientaddr, addrlen) < 0)
                     {
@@ -445,6 +446,9 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
                     average_rtt_command_join = average_rtt_command_join / total_rtt_command_join;
                     
                     printf("Measured rtt for join command %lu and calculated average %d \n", stop.tv_usec - start.tv_usec, average_rtt_command_join);
+                    long unsigned int throughput_command = 100 * 4 * (long unsigned int)sizeof(command) / (stop.tv_usec - start.tv_usec);
+                    long unsigned int throughput_response = 100 * 4 * (long unsigned int)sizeof(session_list[i]) / (stop.tv_usec - start.tv_usec);
+                    printf("Throughput for command: %lu , response: %lu\n", throughput_command, throughput_response);
                     
                     
                     if (sendto(socket_fd, &session_list[i], sizeof(session_list[i]), 0, (struct sockaddr *)&(session_list[i].game_settings.player_one_addr), addrlen) < 0)
@@ -455,9 +459,6 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
                     {
                       perror("join 2");
                     }
-                    
-                    printf("Notified both players. Game starting\n");
-                    
                     
                 }
             }
@@ -584,6 +585,9 @@ void cmd_handler(int socket_fd, int t,char **command, struct sockaddr_in *client
         average_rtt_command_move = average_rtt_command_move / total_rtt_command_move;
         
         printf("Measured rtt for move command %lu and calculated average %d \n", stop.tv_usec - start.tv_usec, average_rtt_command_move);
+        long unsigned int throughput_command = 100 * 4 * (long unsigned int)sizeof(command) / (stop.tv_usec - start.tv_usec);
+        long unsigned int throughput_response = 100 * 4 * (long unsigned int)sizeof(session_list[i]) / (stop.tv_usec - start.tv_usec);
+        printf("Throughput for command: %lu , response: %lu\n", throughput_command, throughput_response);
         
         if (session_list[i].game_settings.turn == 1) {
             session_list[i].game_settings.turn = 2;
